@@ -277,6 +277,14 @@ button {
   display: grid;
   grid-template-columns: var(--sidebar) 1fr;
 }
+.mobile-nav,
+.mobile-panel-heading,
+.mobile-layers-toggle {
+  display: none;
+}
+.map-layer-controls {
+  display: contents;
+}
 .sidebar {
   background: var(--panel);
   border-right: 1px solid var(--line);
@@ -1341,9 +1349,9 @@ dialog p {
     bottom: 10px;
   }
 }
-@media (max-width: 680px) {
+@media (max-width: 680px), (max-height: 500px) and (max-width: 950px) {
   body {
-    overflow: auto;
+    overflow: hidden;
     overscroll-behavior-y: none;
   }
   .topbar {
@@ -1380,17 +1388,61 @@ dialog p {
     display: none;
   }
   .workspace {
-    height: auto;
-    min-height: calc(100dvh - 56px - env(safe-area-inset-top));
-    display: flex;
-    flex-direction: column;
+    height: calc(100dvh - 56px - env(safe-area-inset-top));
+    min-height: 0;
+    display: block;
+    position: relative;
   }
   .sidebar {
     order: 2;
+    display: none;
+    position: absolute;
+    inset: 0 0 calc(64px + env(safe-area-inset-bottom)) 0;
+    z-index: 900;
     width: 100%;
     max-height: none;
     border-right: 0;
-    padding: 14px max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 max(12px, env(safe-area-inset-right)) 24px max(12px, env(safe-area-inset-left));
+  }
+  body.mobile-controls-open .sidebar {
+    display: block;
+  }
+  .mobile-panel-heading {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 64px;
+    margin: 0 -12px 4px;
+    padding: 10px 12px;
+    background: #111614f7;
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(12px);
+  }
+  .mobile-panel-heading strong,
+  .mobile-panel-heading small {
+    display: block;
+  }
+  .mobile-panel-heading strong {
+    font-size: 15px;
+  }
+  .mobile-panel-heading small {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 2px;
+  }
+  .mobile-panel-heading button {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: #171d1a;
+    color: var(--text);
+    font-size: 22px;
   }
   .control-section {
     padding: 14px 0 16px;
@@ -1410,15 +1462,32 @@ dialog p {
   }
   .map-stage {
     order: 1;
-    height: calc(100dvh - 56px - env(safe-area-inset-top));
-    min-height: 520px;
+    height: 100%;
+    min-height: 0;
   }
   .results-panel {
-    left: 8px;
-    right: 8px;
-    bottom: max(8px, env(safe-area-inset-bottom));
-    max-height: 42dvh;
+    display: none;
+    inset: 0 0 calc(64px + env(safe-area-inset-bottom)) 0;
+    max-height: none;
     overflow-y: auto;
+    border: 0;
+    border-radius: 0;
+    background: #101614;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  body.mobile-results-open .results-panel {
+    display: block;
+  }
+  body.mobile-controls-open #map,
+  body.mobile-controls-open .map-tools,
+  body.mobile-controls-open .legend,
+  body.mobile-controls-open .toast,
+  body.mobile-results-open #map,
+  body.mobile-results-open .map-tools,
+  body.mobile-results-open .legend,
+  body.mobile-results-open .toast {
+    visibility: hidden;
   }
   .results-panel header {
     padding: 7px 8px;
@@ -1458,11 +1527,11 @@ dialog p {
     font-size: 11px;
   }
   .legend {
-    display: flex;
-    top: 62px;
+    display: none;
+    top: 60px;
     bottom: auto;
-    left: 8px;
-    right: 8px;
+    left: calc(60px + env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
     max-width: none;
     justify-content: center;
     gap: 6px 10px;
@@ -1473,19 +1542,33 @@ dialog p {
     z-index: 560;
   }
   .map-tools {
-    left: 8px;
-    right: 8px;
+    left: calc(60px + env(safe-area-inset-left));
+    right: auto;
     transform: none;
-    max-width: none;
-    top: 10px;
+    max-width: calc(100% - 68px - env(safe-area-inset-left) - env(safe-area-inset-right));
+    top: 8px;
     padding: 3px 4px;
     gap: 3px;
     border-radius: 7px;
     flex-wrap: nowrap;
     justify-content: flex-start;
-    overflow-x: auto;
+    overflow-x: hidden;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+  }
+  .mobile-layers-toggle {
+    display: block;
+    min-width: 74px;
+  }
+  .map-tools:not(.expanded) > :not(.mobile-layers-toggle) {
+    display: none;
+  }
+  .map-tools.expanded {
+    right: max(8px, env(safe-area-inset-right));
+    overflow-x: auto;
+  }
+  .map-tools.expanded + .legend {
+    display: flex;
   }
   .map-tools::-webkit-scrollbar { display: none; }
   .map-tools button {
@@ -1531,6 +1614,73 @@ dialog p {
     z-index: 2;
     background: #101614;
   }
+  .collapse-btn {
+    display: none;
+  }
+  .mobile-nav {
+    position: fixed;
+    z-index: 1100;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(64px + env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 6px max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    background: #0d110ff5;
+    border-top: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+  }
+  .mobile-nav button {
+    min-width: 0;
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .mobile-nav button span {
+    font-size: 18px;
+    line-height: 1;
+  }
+  .mobile-nav button.active {
+    background: #273126;
+    color: var(--accent);
+  }
+  .leaflet-bottom {
+    bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  .leaflet-left {
+    left: env(safe-area-inset-left);
+  }
+  .leaflet-right {
+    right: env(safe-area-inset-right);
+  }
+  .leaflet-control-attribution {
+    max-width: 100vw;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    font-size: 8px;
+  }
+  .leaflet-control-attribution::-webkit-scrollbar {
+    display: none;
+  }
+  .run-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    padding: 10px 0;
+    background: #111614f7;
+  }
   .leaflet-control-zoom a,
   .leaflet-control-locate a {
     width: 44px !important;
@@ -1571,7 +1721,7 @@ dialog p {
   }
   .map-tools {
     gap: 2px;
-    max-width: calc(100% - 8px);
+    max-width: calc(100% - 68px);
     padding: 2px 3px;
   }
   .map-tools button {
@@ -1585,7 +1735,7 @@ dialog p {
 }
 @media (max-width: 320px) {
   .map-tools {
-    max-width: calc(100% - 8px);
+    max-width: calc(100% - 68px);
     gap: 1px;
     padding: 2px 2px;
   }

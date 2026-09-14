@@ -618,6 +618,65 @@
   window.addEventListener('resize', resizeMap);
   window.addEventListener('orientationchange', resizeMap);
 
+  const mobileLayout = window.matchMedia('(max-width: 680px), (max-height: 500px) and (max-width: 950px)');
+  let mobilePanel = 'map';
+  let openMobileResultsAfterRun = false;
+  function setMobilePanel(panel, moveFocus = false) {
+    mobilePanel = ['map', 'controls', 'results'].includes(panel) ? panel : 'map';
+    const focusTarget = mobilePanel === 'controls'
+      ? $('closeMobileControls')
+      : mobilePanel === 'results'
+        ? $('resultsPanel')
+        : document.querySelector('[data-mobile-panel="map"]');
+    if (mobileLayout.matches && document.activeElement?.closest('#controlsPanel, #resultsPanel')) {
+      focusTarget?.focus({preventScroll:true});
+    }
+    document.body.classList.toggle('mobile-controls-open', mobileLayout.matches && mobilePanel === 'controls');
+    document.body.classList.toggle('mobile-results-open', mobileLayout.matches && mobilePanel === 'results');
+    document.querySelectorAll('[data-mobile-panel]').forEach(button => {
+      const active = button.dataset.mobilePanel === mobilePanel;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    [
+      [$('controlsPanel'), 'controls'],
+      [$('resultsPanel'), 'results'],
+    ].forEach(([panelElement, panelName]) => {
+      if (!panelElement) return;
+      if (mobileLayout.matches) {
+        const hidden = mobilePanel !== panelName;
+        panelElement.inert = hidden;
+        panelElement.setAttribute('aria-hidden', String(hidden));
+      } else {
+        panelElement.inert = false;
+        panelElement.removeAttribute('aria-hidden');
+      }
+    });
+    if (mobileLayout.matches && moveFocus) focusTarget?.focus({preventScroll:true});
+    if (mobilePanel === 'map') requestAnimationFrame(() => map.invalidateSize());
+  }
+  document.querySelectorAll('[data-mobile-panel]').forEach(button => {
+    button.addEventListener('click', () => setMobilePanel(button.dataset.mobilePanel, true));
+  });
+  $('closeMobileControls')?.addEventListener('click', () => setMobilePanel('map', true));
+  const mobileLayersToggle = $('mobileLayersToggle');
+  mobileLayersToggle?.addEventListener('click', () => {
+    const expanded = document.querySelector('.map-tools')?.classList.toggle('expanded') || false;
+    mobileLayersToggle.setAttribute('aria-expanded', String(expanded));
+  });
+  mobileLayout.addEventListener('change', () => {
+    setMobilePanel(mobileLayout.matches ? mobilePanel : 'map');
+    resizeMap();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && mobileLayout.matches) {
+      document.querySelector('.map-tools')?.classList.remove('expanded');
+      mobileLayersToggle?.setAttribute('aria-expanded', 'false');
+      setMobilePanel('map', true);
+    }
+  });
+  setMobilePanel('map');
+
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:20, attribution:'&copy; OpenStreetMap contributors'});
   const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     maxZoom:20,
@@ -631,6 +690,7 @@
   function setBusy(on, title='Analyzing terrain') {
     $('loadingTitle').textContent=title;
     $('loading').hidden=!on;
+    if (on && openMobileResultsAfterRun && mobileLayout.matches) setMobilePanel('map');
   }
   let toastTimer;
   function toast(message, error=false) {
@@ -690,6 +750,7 @@
         drawPath(result.status);
         renderResult(result);
       } catch (err) {
+        openMobileResultsAfterRun = false;
         if (err.name !== 'AbortError') {
           // Keep previous stale-path cleanup semantics for server 4xx
           if (String(err.message).includes('outside') || String(err.message).includes('gap') || String(err.message).includes('Request failed')) {
@@ -1403,6 +1464,7 @@
         console.log('[Sightline] LOS hit gap/outside — auto-fetching terrain corridor…');
         return await ensureCoverageAndRun(true);
       }
+      openMobileResultsAfterRun = false;
       toast(e.message, true);
       return false;
     } finally {
@@ -1611,6 +1673,8 @@
   }));
   const runPrimary = $('runPrimary');
   if (runPrimary) runPrimary.addEventListener('click', () => {
+    openMobileResultsAfterRun = true;
+    if (mobileLayout.matches) setMobilePanel('map');
     if (state.analysisMode === 'viewshed') {
       $('runViewshed').click();
     } else {
@@ -1951,6 +2015,10 @@
     panel.classList.remove('collapsed');
     const btn = $('collapseResults');
     if (btn) { btn.setAttribute('aria-expanded','true'); btn.textContent='⌄'; btn.setAttribute('aria-label','Collapse results'); }
+    if (openMobileResultsAfterRun && mobileLayout.matches) {
+      openMobileResultsAfterRun = false;
+      setMobilePanel('results', true);
+    }
   }
 
   function renderViewshed(r){
@@ -2065,6 +2133,10 @@
     if (panel2) panel2.classList.remove('collapsed');
     const btn2 = $('collapseResults');
     if (btn2) { btn2.setAttribute('aria-expanded','true'); btn2.textContent='⌄'; }
+    if (openMobileResultsAfterRun && mobileLayout.matches) {
+      openMobileResultsAfterRun = false;
+      setMobilePanel('results', true);
+    }
   }
 
   let activeProfile = null;

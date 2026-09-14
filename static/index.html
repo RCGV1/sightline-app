@@ -44,7 +44,11 @@
   </header>
 
   <main class="workspace">
-    <aside class="sidebar" aria-label="Analysis controls">
+    <aside class="sidebar" id="controlsPanel" aria-label="Analysis controls">
+      <div class="mobile-panel-heading">
+        <div><strong>Analysis setup</strong><small>Choose a mode, place sites, then run</small></div>
+        <button type="button" id="closeMobileControls" aria-label="Close analysis setup">×</button>
+      </div>
       <div class="segmented analysis-mode" role="group" aria-label="Analysis mode" style="margin: 10px 0 14px;">
         <button data-analysis="path" class="active" aria-pressed="true">● Path A→B</button>
         <button data-analysis="viewshed" aria-pressed="false">◉ Viewshed (A)</button>
@@ -200,22 +204,25 @@
       </div>
     </aside>
 
-    <section class="map-stage" aria-label="Terrain map">
+    <section class="map-stage" id="mapStage" aria-label="Terrain map">
       <div id="map"></div>
       <div class="map-tools" role="toolbar" aria-label="Map layers">
+        <button type="button" class="mobile-layers-toggle" id="mobileLayersToggle" aria-expanded="false" aria-controls="mapLayerControls mapLegend">Layers</button>
+        <div class="map-layer-controls" id="mapLayerControls">
         <button data-base="terrain" aria-pressed="false">LiDAR color</button><button data-base="osm" aria-pressed="false">OSM</button><button class="active" data-base="satellite" aria-pressed="true">Satellite</button>
         <span></span>
         <label title="Toggle 3D building & canopy overlays"><input id="classToggle" type="checkbox" checked> Objects</label>
         <label title="Highlight obstructed segments"><input id="toggleObstructions" type="checkbox" checked> <i class="layer-dot dot-blocked"></i>Blocked</label>
         <label title="Include mapped tree canopy in analysis"><input id="toggleFoliage" type="checkbox" checked> <i class="layer-dot dot-foliage"></i>Include foliage</label>
+        </div>
       </div>
-      <div class="legend" aria-label="Map legend">
+      <div class="legend" id="mapLegend" aria-label="Map legend">
         <span><i class="clear"></i>Clear</span><span><i class="foliage"></i>Foliage</span><span><i class="fresnel"></i>Fresnel constrained</span><span><i class="blocked"></i>Blocked</span><span><i class="unknown"></i>Unknown</span>
       </div>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
       <div class="loading" id="loading" hidden><span class="spinner"></span><strong id="loadingTitle">Analyzing terrain</strong><small>This can take a moment on large datasets.</small></div>
 
-      <section class="results-panel" id="resultsPanel" aria-label="Analysis results">
+      <section class="results-panel" id="resultsPanel" tabindex="-1" aria-label="Analysis results">
         <header>
           <div class="results-heading"><p class="eyebrow" id="resultsEyebrow">Elevation profile</p><h2 id="resultTitle">Ready for analysis</h2></div>
           <div class="metrics" id="metrics" aria-live="polite"></div>
@@ -234,6 +241,12 @@
       </section>
     </section>
   </main>
+
+  <nav class="mobile-nav" id="mobileNav" aria-label="Mobile workspace">
+    <button type="button" data-mobile-panel="map" class="active" aria-pressed="true" aria-controls="mapStage"><span aria-hidden="true">⌖</span>Map</button>
+    <button type="button" data-mobile-panel="controls" aria-pressed="false" aria-controls="controlsPanel"><span aria-hidden="true">☷</span>Setup</button>
+    <button type="button" data-mobile-panel="results" aria-pressed="false" aria-controls="resultsPanel"><span aria-hidden="true">⌁</span>Results</button>
+  </nav>
 
   <dialog id="helpDialog">
     <button class="dialog-close" aria-label="Close help">×</button>

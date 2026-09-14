@@ -145,13 +145,66 @@ class StaticBuildTests(unittest.TestCase):
         self.assertIn('env(safe-area-inset-top)', css)
         self.assertIn('env(safe-area-inset-bottom)', css)
         self.assertRegex(css, r'@media\s*\(max-width:\s*680px\)')
+        self.assertIn('(max-height: 500px) and (max-width: 950px)', css)
+        self.assertIn("(max-height: 500px) and (max-width: 950px)", app)
         self.assertRegex(css, r'@media\s*\(max-width:\s*680px\)[\s\S]*?min-height:\s*44px')
         self.assertRegex(css, r'\.map-stage\s*\{[\s\S]{0,120}?order:\s*1')
         self.assertRegex(css, r'\.sidebar\s*\{[\s\S]{0,220}?order:\s*2')
-        self.assertIn('42dvh', css)
+        self.assertIn('height: calc(100dvh - 56px - env(safe-area-inset-top))', css)
         self.assertIn('map.invalidateSize()', app)
         narrow_mobile = css[css.index('@media (max-width: 320px)'):]
         self.assertNotIn('bottom: 254px', narrow_mobile)
+
+    def test_mobile_release_uses_dedicated_map_setup_and_results_views(self):
+        index = (ROOT / 'static' / 'index.html').read_text()
+        css = (ROOT / 'static' / 'style.css').read_text()
+        app = (ROOT / 'static' / 'app.js').read_text()
+        self.assertIn('class="mobile-nav" id="mobileNav"', index)
+        self.assertIn('data-mobile-panel="map"', index)
+        self.assertIn('data-mobile-panel="controls"', index)
+        self.assertIn('data-mobile-panel="results"', index)
+        self.assertIn('id="mobileLayersToggle"', index)
+        self.assertIn('aria-controls="mapStage"', index)
+        self.assertIn('aria-controls="controlsPanel"', index)
+        self.assertIn('aria-controls="resultsPanel"', index)
+        self.assertIn('aria-controls="mapLayerControls mapLegend"', index)
+        self.assertIn('function setMobilePanel(', app)
+        self.assertIn("setMobilePanel('results', true)", app)
+        self.assertIn('id="resultsPanel" tabindex="-1"', index)
+        self.assertIn("event.key === 'Escape'", app)
+        self.assertIn("panelElement.inert =", app)
+        self.assertIn("focusTarget?.focus({preventScroll:true})", app)
+        self.assertRegex(
+            css,
+            r'body\.mobile-controls-open\s+\.sidebar\s*\{[\s\S]{0,80}?display:\s*block',
+        )
+        self.assertRegex(
+            css,
+            r'body\.mobile-results-open\s+\.results-panel\s*\{[\s\S]{0,80}?display:\s*block',
+        )
+        self.assertIn('body.mobile-controls-open #map', css)
+        self.assertIn('body.mobile-results-open #map', css)
+        self.assertRegex(
+            css,
+            r'@media\s*\(max-width:\s*680px\)[\s\S]*?\.results-panel\s*\{'
+            r'[\s\S]{0,260}?display:\s*none',
+        )
+        self.assertRegex(css, r'\.mobile-nav\s*\{[\s\S]{0,260}?position:\s*fixed')
+
+    def test_mobile_map_chrome_is_compact_until_layers_are_opened(self):
+        css = (ROOT / 'static' / 'style.css').read_text()
+        self.assertRegex(
+            css,
+            r'\.map-tools:not\(\.expanded\)\s*>\s*:not\(\.mobile-layers-toggle\)'
+            r'\s*\{[\s\S]{0,60}?display:\s*none',
+        )
+        self.assertRegex(
+            css,
+            r'\.map-tools\.expanded\s*\+\s*\.legend\s*\{[\s\S]{0,80}?display:\s*flex',
+        )
+        self.assertIn('left: env(safe-area-inset-left)', css)
+        self.assertIn('right: env(safe-area-inset-right)', css)
+        self.assertIn('right: max(8px, env(safe-area-inset-right))', css)
 
     def test_ad_slot_is_in_document_flow_instead_of_loading_overlay(self):
         index = (ROOT / 'static' / 'index.html').read_text()
