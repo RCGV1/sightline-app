@@ -1,0 +1,122 @@
+{
+  "dataset": "Automatically fetched terrain, buildings & canopy",
+  "source": "USGS 3DEP EPT project CA_SanFrancisco_1_B23; \u00a9 OpenStreetMap contributors, ODbL; Meta/WRI Version 2 Global Canopy Height Map (CHMv2)",
+  "bounds": [
+    [
+      37.755929304709795,
+      -122.45059172242128
+    ],
+    [
+      37.763245739322926,
+      -122.44137611010127
+    ]
+  ],
+  "resolution_m": 3.0,
+  "blocked_path": {
+    "status": "blocked",
+    "direct_status": "blocked",
+    "viability": "blocked",
+    "distance_m": 250.0639918109596,
+    "distance_3d_m": 250.38831351722573,
+    "min_clearance_m": -25.519184759433756,
+    "critical_obstacle": {
+      "distance_m": 93.89803660845568,
+      "fraction": 0.3754960317495035,
+      "obstacle_type": "building",
+      "obstacle_elevation_m": 161.22999572753906,
+      "ray_elevation_m": 135.79295766899506,
+      "clearance_m": -25.519184759433756,
+      "fresnel_clearance_m": -26.481622280987825,
+      "required_clearance_height_both_m": 25.519184759433756,
+      "required_clearance_height_a_m": 40.86312666823229,
+      "required_clearance_height_b_m": 67.96126350666154,
+      "required_fresnel_height_both_m": 0.0
+    },
+    "link_budget": {
+      "tx_power_dbm": 24.0,
+      "antenna_gain_a_dbi": 23.0,
+      "antenna_gain_b_dbi": 23.0,
+      "cable_loss_a_db": 1.0,
+      "cable_loss_b_db": 1.0,
+      "channel_width_mhz": 20.0,
+      "eirp_dbm": 46.0,
+      "free_space_loss_db": 95.68862419306151,
+      "foliage_loss_db": 6.3093880586308195,
+      "total_path_loss_db": 101.99801225169233,
+      "rx_power_dbm": -33.99801225169233,
+      "thermal_noise_dbm": -95.98970004336019,
+      "rx_sensitivity_dbm": -80.98970004336019,
+      "link_margin_db": 46.99168779166786,
+      "snr_db": 61.99168779166786,
+      "viability": "blocked"
+    },
+    "alignment": {
+      "azimuth_a_to_b": 330.0828286737116,
+      "azimuth_b_to_a": 150.08196161787112,
+      "tilt_a_to_b": 2.91568248435978,
+      "tilt_b_to_a": -2.917364775120104
+    }
+  },
+  "fresnel_constrained_path": {
+    "status": "fresnel",
+    "direct_status": "clear",
+    "viability": "marginal",
+    "distance_m": 250.0639918109596,
+    "min_clearance_m": 0.48081524056624403,
+    "min_fresnel_clearance_m": -0.5600935603550576,
+    "link_margin_db": 53.30107585029867
+  },
+  "clear_viable_path": {
+    "status": "clear",
+    "direct_status": "clear",
+    "viability": "viable",
+    "distance_m": 250.0639918109596,
+    "min_clearance_m": 1.480815240566244,
+    "min_fresnel_clearance_m": 0.43990643964494236,
+    "link_budget": {
+      "tx_power_dbm": 24.0,
+      "antenna_gain_a_dbi": 23.0,
+      "antenna_gain_b_dbi": 23.0,
+      "cable_loss_a_db": 1.0,
+      "cable_loss_b_db": 1.0,
+      "channel_width_mhz": 20.0,
+      "eirp_dbm": 46.0,
+      "free_space_loss_db": 95.68862419306151,
+      "foliage_loss_db": 0.0,
+      "total_path_loss_db": 95.68862419306151,
+      "rx_power_dbm": -27.688624193061514,
+      "thermal_noise_dbm": -95.98970004336019,
+      "rx_sensitivity_dbm": -80.98970004336019,
+      "link_margin_db": 53.30107585029867,
+      "snr_db": 68.30107585029867,
+      "viability": "viable"
+    },
+    "alignment": {
+      "azimuth_a_to_b": 330.0828286737116,
+      "azimuth_b_to_a": 150.08196161787112,
+      "tilt_a_to_b": 2.91568248435978,
+      "tilt_b_to_a": -2.917364775120104
+    }
+  },
+  "rooftop_mounting": {
+    "mounts": {
+      "a": {
+        "mount_type": "rooftop",
+        "ground_elevation_m": 121.01000213623047,
+        "base_elevation_m": 132.85000610351562,
+        "structure_height_m": 11.840003967285156,
+        "mast_height_m": 10.0,
+        "total_elevation_m": 142.85000610351562
+      },
+      "b": {
+        "mount_type": "agl",
+        "ground_elevation_m": 133.75,
+        "base_elevation_m": 133.75,
+        "structure_height_m": 0.0,
+        "mast_height_m": 10.0,
+        "total_elevation_m": 143.75
+      }
+    },
+    "status": "blocked"
+  }
+}

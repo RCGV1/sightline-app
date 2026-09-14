@@ -1,0 +1,102 @@
+{
+  "name": "Automatically fetched terrain, buildings & canopy",
+  "source": "USGS 3DEP EPT project CA_SanFrancisco_1_B23; \u00a9 OpenStreetMap contributors, ODbL; Meta/WRI Version 2 Global Canopy Height Map (CHMv2)",
+  "resolution_m": 3.0,
+  "xmin": 549149.0939513727,
+  "ymax": 4183923.3599864515,
+  "crs": "EPSG:32610",
+  "bounds": [
+    [
+      37.79861921914744,
+      -122.4417235892231
+    ],
+    [
+      37.80136645004769,
+      -122.43826133268904
+    ]
+  ],
+  "center": [
+    37.799999513347494,
+    -122.44000128524287
+  ],
+  "notes": [
+    "RGB is colorized LiDAR return data, not aerial imagery.",
+    "No class-6 building returns were present; this does not establish a clear area.",
+    "No vegetation class 3/4/5 returns were present; this does not establish a clear area."
+  ],
+  "analysis_notes": [
+    "Ground is interpolated only into cells with retained returns and a nearest class-2 cell within 30 m.",
+    "Cells without retained returns remain data gaps (ground is NaN).",
+    "EPT points were resolution-sampled through octree depth 7 (theoretical source spacing 1.29 m). Raster maxima use only those sampled measured returns; small buildings, trees, and other obstacles may be missed.",
+    "OSM footprint building heights use the maximum elevated LiDAR return inside each footprint, potentially including roof trees/equipment. Mapped buildings without a usable height remain unknown. Building mapping and survey dates differ.",
+    "Tree layer includes automatically fetched Meta/WRI satellite-derived canopy estimates (>=2 m), alongside classified LiDAR canopy. Predictions can miss or overestimate trees. Unclassified LiDAR returns within satellite tree areas are inferred to be vegetation; their heights can raise the canopy estimate. Object labels and cross-date matching can be wrong."
+  ],
+  "class_counts": {
+    "1": 222004,
+    "2": 46494
+  },
+  "ignored_returns": 1255,
+  "ground_coverage": {
+    "cells": 10168,
+    "total_cells": 10201,
+    "fraction": 0.9967650230369571
+  },
+  "default_a": [
+    37.79999284692416,
+    -122.43999249262994
+  ],
+  "default_b": [
+    37.80135285013762,
+    -122.44168609827511
+  ],
+  "fetch_provider": "USGS 3DEP EPT",
+  "fetch_project": "CA_SanFrancisco_1_B23",
+  "fetch_ept_url": "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/CA_SanFrancisco_1_B23/ept.json",
+  "requested_center": [
+    37.8,
+    -122.44
+  ],
+  "requested_radius_m": 150.0,
+  "cropped_point_count": 269753,
+  "downloaded_node_count": 26,
+  "downloaded_bytes": 8445233,
+  "ept_srs": {
+    "authority": "EPSG",
+    "horizontal": "3857",
+    "wkt": "PROJCS[\"WGS 84 / Pseudo-Mercator\",GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Mercator_1SP\"],PARAMETER[\"central_meridian\",0],PARAMETER[\"scale_factor\",1],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"X\",EAST],AXIS[\"Y\",NORTH],EXTENSION[\"PROJ4\",\"+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs\"],AUTHORITY[\"EPSG\",\"3857\"]]"
+  },
+  "vertical_reference": "not encoded in EPT srs; official USGS EPSG:3857 EPT normalized meter Z assumed",
+  "source_sampling_m": 1.2884521484375,
+  "source_sampling_depth": 7,
+  "enrichment_sources": {
+    "buildings": {
+      "source": "\u00a9 OpenStreetMap contributors, ODbL",
+      "url": "https://www.openstreetmap.org/copyright",
+      "endpoint": "https://overpass-api.de/api/interpreter",
+      "footprints": 210,
+      "date": "2026-09-08T23:24:01Z"
+    },
+    "canopy": {
+      "source": "Meta/WRI Version 2 Global Canopy Height Map (CHMv2)",
+      "version": "2",
+      "method": "DINOv3-based model estimate from high-resolution satellite imagery",
+      "units": "meters above ground",
+      "source_imagery_period": "Varies by tile; consult the source observation-date dataset",
+      "license": "CC BY 4.0",
+      "urls": [
+        "https://dataforgood-fb-data.s3.us-east-1.amazonaws.com/forests/v2/global/dinov3_global_chm_v2_ml3/chm/0230102033.tif"
+      ],
+      "successful_cells": 10201,
+      "total_cells": 10201,
+      "max_height_m": 12.0,
+      "note": "Canopy heights are satellite-derived AI estimates, not exact individual-tree measurements."
+    }
+  },
+  "enrichment_counts": {
+    "ground": 10168,
+    "buildings": 6231,
+    "trees": 834,
+    "unknown": 2856,
+    "uncertain": 1
+  }
+}

@@ -1,0 +1,18 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.git
+.gitignore
+data/cache
+data/ept-cache
+data/*.log
+.DS_Store
+.env
+venv
+.venv
+# Keep seed datasets in image; ignore ephemeral fetched scenes
+data/fetched.npz
+data/imported.npz

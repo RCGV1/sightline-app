@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Single-page app — no sitemap needed. If you add docs, add:
+# Sitemap: https://example.com/sitemap.xml

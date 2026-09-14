@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sightline — Terrain Visibility &amp; Radio Link Planner</title>
+  <meta name="description" content="Sightline analyzes line-of-sight, Fresnel clearance, and radio link budgets worldwide using terrain, mapped buildings, and satellite canopy data directly in the browser.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Sightline — Terrain Visibility &amp; Radio Link Planner">
+  <meta property="og:description" content="Point-to-point visibility and RF link planning with real terrain, buildings, and tree canopy. Free, browser-based analysis.">
+  <meta property="og:image" content="/static/favicon.svg">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Sightline — Terrain Visibility &amp; Radio Link Planner">
+  <meta name="twitter:description" content="Analyze line-of-sight and radio links over real terrain, buildings, and canopy.">
+  <link rel="icon" href="./static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./static/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="./static/style.css">
+  <!-- Analytics placeholder: paste GA4 or Plausible tag below. Example: <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXX"></script> -->
+  <!-- Ads placeholder: AdSense verification / auto-ads script goes here. Do NOT add intrusive interstitials. See loadingAd notes in style.css. -->
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Sightline home"><span class="brand-mark" aria-hidden="true"></span><span>SIGHTLINE</span></a>
+    <div class="dataset"><span class="status-dot" id="datasetDot"></span><span id="datasetName">Loading terrain…</span><span class="dataset-meta" id="datasetMeta"></span></div>
+    <div class="search-container" id="locationSearch" role="search">
+      <div class="search-input-wrap">
+        <span class="search-icon" aria-hidden="true">&#9906;</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Go to any location or coordinates (e.g. 37.77, -122.42, DMS, landmark)…" aria-label="Search location" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="searchDropdown" aria-haspopup="listbox" aria-autocomplete="list">
+        <button class="search-clear" id="searchClear" aria-label="Clear search" title="Clear" hidden>&times;</button>
+        <button class="search-submit" id="searchSubmit" title="Go there">Go</button>
+      </div>
+      <div class="search-dropdown" id="searchDropdown" hidden role="listbox" aria-label="Search suggestions"></div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-button" id="helpButton" aria-label="Open help" title="Help">?</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="sidebar" aria-label="Analysis controls">
+      <div class="segmented analysis-mode" role="group" aria-label="Analysis mode" style="margin: 10px 0 14px;">
+        <button data-analysis="path" class="active" aria-pressed="true">● Path A→B</button>
+        <button data-analysis="viewshed" aria-pressed="false">◉ Viewshed (A)</button>
+      </div>
+      <section class="control-section" style="margin-top: 4px;" id="endpointsSection">
+        <div class="section-heading"><span class="step">01</span><h2 id="endpointsHeading">Endpoints</h2><span class="hint" id="endpointsHint">Drag markers or place below</span></div>
+        <div class="segmented" role="group" aria-label="Map placement"><button id="placeA" class="active" aria-pressed="true">Place A</button><button id="placeB" aria-pressed="false">Place B</button></div>
+        <div class="point-card point-a">
+          <div class="point-title">
+            <span class="point-badge">A</span><strong>Site A</strong>
+            <select id="mountTypeA" class="mount-select" title="Mount base">
+              <option value="agl" selected>Ground AGL</option>
+              <option value="rooftop">Rooftop</option>
+            </select>
+          </div>
+          <div class="coord-row"><label>Lat<input id="aLat" type="number" step="any" inputmode="decimal"></label><label>Lon<input id="aLon" type="number" step="any" inputmode="decimal"></label><label class="height">Mast m<input id="heightA" type="number" min="0" step="0.5" value="10"></label></div>
+        </div>
+        <div class="point-card point-b" id="pointBCard">
+          <div class="point-title">
+            <span class="point-badge">B</span><strong>Site B</strong>
+            <select id="mountTypeB" class="mount-select" title="Mount base">
+              <option value="agl" selected>Ground AGL</option>
+              <option value="rooftop">Rooftop</option>
+            </select>
+          </div>
+          <div class="coord-row"><label>Lat<input id="bLat" type="number" step="any" inputmode="decimal"></label><label>Lon<input id="bLon" type="number" step="any" inputmode="decimal"></label><label class="height">Mast m<input id="heightB" type="number" min="0" step="0.5" value="10"></label></div>
+        </div>
+        <p class="microcopy viewshed-only" id="viewshedOriginHint" hidden>Viewshed analyzes <strong>360° around Site A</strong> — Site B is ignored in this mode. <a href="#" id="switchToPathHint" style="color:var(--accent)">Switch to Path</a></p>
+      </section>
+
+      <section class="control-section" id="radioSection">
+        <div class="section-heading"><span class="step">02</span><h2>Radio &amp; Signal model</h2></div>
+        <div class="segmented" role="group" aria-label="Analysis mode">
+          <button class="active" data-mode="radio" aria-pressed="true">Radio</button><button data-mode="optical" aria-pressed="false">Optical</button>
+        </div>
+        <p class="microcopy" id="radioModeHint">Radio includes Earth curvature, Fresnel clearance &amp; link-budget analysis. Optical is straight-line terrain only — radio fields are disabled in Optical.</p>
+        <div class="radio-fields">
+          <label class="preset-label">Hardware Preset
+            <select id="radioPreset">
+              <option value="wifi5_dish" selected>5.8 GHz High-Gain Dish (PTP Backhaul)</option>
+              <option value="wifi5_panel">5.2 GHz Medium-Range Panel</option>
+              <option value="wifi24_ptp">2.4 GHz Long-Range / Tree Foliage</option>
+              <option value="wifi6_ptp">6 GHz Wi-Fi 6E/7 High-Capacity PTP</option>
+              <option value="lora_915">915 MHz ISM / LoRa / Mesh</option>
+              <option value="custom">Custom Configuration…</option>
+            </select>
+          </label>
+          <div class="field-grid three">
+            <label>Freq <span>MHz</span><input id="frequency" type="number" min="1" value="5800"></label>
+            <label>K factor<input id="kFactor" type="number" min="0.1" step="0.001" value="1.333"></label>
+            <label>Tree loss <span>dB/m</span><input id="foliage" type="number" min="0" step="0.01" value="0.35"></label>
+          </div>
+          <details class="rf-equipment-details">
+            <summary>Link budget &amp; equipment</summary>
+            <div class="field-grid two rf-grid">
+              <label>Tx Power <span>dBm</span><input id="txPower" type="number" step="0.5" value="24"></label>
+              <label>Channel <span>MHz</span><input id="channelWidth" type="number" step="1" value="40"></label>
+              <label>Antenna A <span>dBi</span><input id="antennaGainA" type="number" step="0.5" value="23"></label>
+              <label>Antenna B <span>dBi</span><input id="antennaGainB" type="number" step="0.5" value="23"></label>
+              <label>Cable A <span>dB</span><input id="cableLossA" type="number" step="0.1" value="1.0"></label>
+              <label>Cable B <span>dB</span><input id="cableLossB" type="number" step="0.1" value="1.0"></label>
+              <label>Sensitivity <span>dBm</span><input id="rxSensitivity" type="number" step="0.5" value="-79"></label>
+              <label>Req. SNR <span>dB</span><input id="requiredSnr" type="number" step="0.5" value="15"></label>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="control-section viewshed-section" id="viewshedSection" hidden>
+        <div class="section-heading"><span class="step">02</span><h2>360° Viewshed Coverage</h2><span class="hint" id="viewshedHint">Around Site A</span></div>
+        <label class="preset-label" style="margin-bottom:6px;">Coverage Radius</label>
+        <div class="segmented radius-presets" role="group" aria-label="Viewshed radius presets" style="margin-bottom:8px;">
+          <button type="button" data-radius="400">400 m</button>
+          <button type="button" data-radius="1000" class="active" aria-pressed="true">1 km</button>
+          <button type="button" data-radius="2000">2 km</button>
+          <button type="button" data-radius="5000">5 km</button>
+          <button type="button" data-radius="10000">10 km</button>
+        </div>
+        <div class="field-grid two">
+          <label>Radius <span>m</span><input id="radius" type="number" min="50" max="500000" value="1000"></label>
+          <label>Sample step <span>m</span><input id="stepM" type="number" min="1" value="20"></label>
+        </div>
+        <div class="field-grid two viewshed-target-grid" style="margin-top:6px;">
+          <label>Target Height <span>m</span><input id="viewshedTargetHeight" type="number" min="0.1" step="0.5" value="2.0" title="Receiver target height above local ground"></label>
+          <label>Target Surface
+            <select id="viewshedTargetSurface">
+              <option value="surface" selected>Visible Surfaces (Terrain + Rooftops)</option>
+              <option value="ground">Ground Only (Buildings Masked)</option>
+            </select>
+          </label>
+        </div>
+        <p class="microcopy" id="viewshedMicrocopy" style="margin-top:6px;">Grid: <span id="viewshedGridInfo">100×100 (10,000 pts)</span> • <span id="viewshedScopeNote" style="color:var(--muted)">Auto-loads terrain anywhere Site A is placed</span></p>
+      </section>
+
+      <div class="run-actions" id="runActions">
+        <button class="button primary" id="runPrimary"><span aria-hidden="true">⌁</span> <span id="runPrimaryLabel">Run path</span></button>
+        <button class="button secondary" id="runViewshed" hidden><span aria-hidden="true">◉</span> Viewshed</button>
+      </div>
+      <p class="microcopy" id="runHint" aria-live="polite" style="margin-top:6px;min-height:14px"></p>
+      <p class="microcopy" id="autoFetchHint" style="margin-top:2px">Run auto-fetches a corridor (~120 m buffer) if Sites are outside current terrain — no manual download needed.</p>
+
+      <details class="area-data-drawer" id="areaDataDrawer">
+        <summary><span class="step">03</span><strong>Area &amp; Terrain Data</strong><span class="drawer-meta" id="drawerScopeLabel">Corridor mode</span></summary>
+        <div class="area-data-content">
+          <div class="scope-selector">
+            <label class="scope-option">
+              <input type="radio" name="fetchScope" value="corridor" id="scopeCorridor" checked>
+              <span class="scope-card">
+                <strong>Path corridor</strong>
+                <small>Fastest (~120m buffer)</small>
+              </span>
+            </label>
+            <label class="scope-option">
+              <input type="radio" name="fetchScope" value="area" id="scopeArea">
+              <span class="scope-card">
+                <strong>Full 360° area</strong>
+                <small>For wide viewsheds</small>
+              </span>
+            </label>
+          </div>
+          <div class="field-grid two area-fields" id="areaFields" style="display: none;">
+            <label>Latitude<input id="fetchLat" type="number" step="any" placeholder="Map center"></label>
+            <label>Longitude<input id="fetchLon" type="number" step="any" placeholder="Map center"></label>
+            <label>Radius <span>m</span><input id="fetchRadius" type="number" min="50" value="500"></label>
+            <label>Resolution <span>m</span><input id="fetchResolution" type="number" min="1" value="3"></label>
+          </div>
+          <div class="fetch-helper-row" id="areaHelpers" style="display: none;">
+            <button class="map-center" id="useMapCenter">◎ Map center</button>
+            <button class="map-center" id="coverPointsAB">⌖ Fit to Sites A &amp; B</button>
+          </div>
+          <button class="button quiet fetch-button" id="fetchArea">Download terrain</button>
+          <p class="fetch-status" id="fetchStatus" aria-live="polite"></p>
+          <details class="advanced-import">
+            <summary>Advanced: import local LAS/LAZ</summary>
+            <div class="field-grid two import-options">
+              <label>Source CRS<input id="importCrs" type="text" placeholder="e.g. EPSG:26910"></label>
+              <label>Vertical units<select id="importUnits"><option value="">Auto from file</option><option value="meters">Meters</option><option value="feet">Feet</option><option value="us-ft">US survey feet</option></select></label>
+            </div>
+            <button class="button quiet" id="importButton">Choose local file</button>
+            <input id="fileInput" type="file" accept=".las,.laz" hidden>
+          </details>
+          <button class="demo-reset" id="resetDemo">Restore demo dataset</button>
+        </div>
+      </details>
+      <div class="utility-actions">
+        <button id="exportKml">Export KML</button><button id="exportJson">Export JSON</button><button id="reset">Reset overlays</button>
+      </div>
+    </aside>
+
+    <section class="map-stage" aria-label="Terrain map">
+      <div id="map"></div>
+      <div class="map-tools" role="toolbar" aria-label="Map layers">
+        <button data-base="terrain" aria-pressed="false">LiDAR color</button><button data-base="osm" aria-pressed="false">OSM</button><button class="active" data-base="satellite" aria-pressed="true">Satellite</button>
+        <span></span>
+        <label title="Toggle 3D building & canopy overlays"><input id="classToggle" type="checkbox" checked> Objects</label>
+        <label title="Highlight obstructed segments"><input id="toggleObstructions" type="checkbox" checked> <i class="layer-dot dot-blocked"></i>Blocked</label>
+        <label title="Include mapped tree canopy in analysis"><input id="toggleFoliage" type="checkbox" checked> <i class="layer-dot dot-foliage"></i>Include foliage</label>
+      </div>
+      <div class="legend" aria-label="Map legend">
+        <span><i class="clear"></i>Clear</span><span><i class="foliage"></i>Foliage</span><span><i class="fresnel"></i>Fresnel constrained</span><span><i class="blocked"></i>Blocked</span><span><i class="unknown"></i>Unknown</span>
+      </div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="loading" id="loading" hidden><span class="spinner"></span><strong id="loadingTitle">Analyzing terrain</strong><small>This can take a moment on large datasets.</small>
+        <!-- AdSense insertion point: replace .ad-placeholder below with your <ins class="adsbygoogle"> unit.
+             Keep the wrapper hidden via [hidden] when not loading. To avoid CLS, the wrapper has fixed min-height
+             and does not overlay map controls — it only appears inside the modal loading overlay (z-index 700).
+             Policy: do not place ads floating over the Leaflet zoom/control bar; do not show during map interaction. -->
+        <div class="loading-ad" id="loadingAd" hidden><small>Advertisement</small><div class="ad-placeholder">Ad placeholder — replace with your AdSense / ad network code
+          <!-- Example:
+          <ins class="adsbygoogle" style="display:block; min-height:90px" data-ad-client="ca-pub-XXXXXXXX" data-ad-slot="YYYYYYYY" data-ad-format="auto" data-full-width-responsive="true"></ins>
+          <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+          --></div></div></div>
+
+      <section class="results-panel" id="resultsPanel" aria-label="Analysis results">
+        <header>
+          <div class="results-heading"><p class="eyebrow" id="resultsEyebrow">Elevation profile</p><h2 id="resultTitle">Ready for analysis</h2></div>
+          <div class="metrics" id="metrics" aria-live="polite"></div>
+          <div class="metrics inspector-metrics" id="profileHud" hidden></div>
+          <button class="icon-button collapse-btn" id="collapseResults" aria-label="Collapse results" aria-expanded="true">⌄</button>
+        </header>
+        <div class="obstruction-hero" id="obstructionHero" hidden></div>
+        <div class="chart-wrap">
+          <svg id="profileChart" role="img" aria-label="Line of sight elevation profile" viewBox="0 0 1000 128" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="empty-chart" id="emptyChart" hidden><span class="empty-icon" aria-hidden="true">◐</span><span>Place points A &amp; B on the map to analyze line of sight</span></div>
+        </div>
+        <div class="viewshed-summary" id="viewshedSummary" hidden></div>
+        <div class="deployment-section" id="deploymentSection" hidden></div>
+        <div class="result-notes" id="resultNotes" aria-live="polite"></div>
+        <footer><span><i class="terrain-key"></i>Terrain</span><span><i class="building-key"></i>Structure</span><span><i class="tree-key"></i>Canopy</span><span><i class="ray-key"></i>Direct ray</span><span><i class="fresnel-key"></i>Fresnel 60%</span></footer>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="helpDialog">
+    <button class="dialog-close" aria-label="Close help">×</button>
+    <p class="eyebrow">Quick guide</p><h2>Reading Sightline</h2>
+    <p><strong>Clear</strong> means the path clears mapped terrain and objects. <strong>Foliage</strong> means trees intersect the path. <strong>Blocked</strong> means terrain or a building obstructs it. Unknown samples stay separate.</p>
+    <p>Radio mode adds Earth curvature and Fresnel clearance. Heights are meters above local ground (AGL). The viewshed samples rays on a grid, so a smaller step is more detailed and slower.</p>
+    <p>The static release downloads global ground elevation from AWS Terrain Tiles, buildings from OpenFreeMap/OpenMapTiles, and Meta/WRI satellite canopy from Source Cooperative. The local Python edition can use higher-detail USGS 3DEP/LiDAR in the United States. Missing source coverage remains unknown and is disclosed in the result notes.</p>
+    <p>Satellite tiles are a visual reference only. Export KML to inspect the path in Google Earth.</p>
+    <p class="microcopy" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px;">Data &amp; imagery credits: Mapzen Terrain Tiles and their source datasets; Buildings: OpenFreeMap / OpenMapTiles, data &copy; OpenStreetMap contributors (ODbL); Tree canopy: Meta / WRI CHMv2 (CC BY 4.0) via Source Cooperative; Basemap source: Esri, Vantor, Earthstar Geographics, and the GIS User Community. See the <a href="./THIRD_PARTY_NOTICES.md" target="_blank" rel="noopener" style="color:var(--accent)">complete data credits</a>.</p>
+  </dialog>
+  <footer class="site-footer" style="position:absolute;bottom:4px;right:8px;z-index:500;font-size:9px;color:var(--muted);background:#0a0d0c99;padding:3px 6px;border-radius:4px;border:1px solid var(--line);">© Sightline — <a href="./THIRD_PARTY_NOTICES.md" target="_blank" rel="noopener" style="color:inherit">data &amp; imagery credits</a></footer>
+  <script src="./static/vendor/leaflet/leaflet.js"></script>
+  <script src="./static/app.js"></script>
+</body>
+</html>

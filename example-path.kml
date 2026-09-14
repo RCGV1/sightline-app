@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Sightline analysis</name>
+<description>Sightline Status: CLEAR (Direct LOS: clear)
+Distance: 250.1 m (3D: 250.4 m)
+Site A: agl (37.0 m mast, total 158.0 m)
+Site B: agl (37.0 m mast, total 170.8 m)
+Alignment: A-&gt;B 330.1° (tilt +2.9°); B-&gt;A 150.1° (tilt -2.9°)
+Viability: VIABLE
+EIRP: 46.0 dBm, FSPL: 95.7 dB, Foliage Loss: 0.0 dB
+Rx Power: -27.7 dBm, Sensitivity: -81.0 dBm
+Link Margin: +53.3 dB, SNR: 68.3 dB
+Source: USGS 3DEP EPT project CA_SanFrancisco_1_B23; © OpenStreetMap contributors, ODbL; Meta/WRI Version 2 Global Canopy Height Map (CHMv2). Absolute heights use the input LiDAR vertical datum; Google Earth terrain may differ. Ground is interpolated only into cells with retained returns and a nearest class-2 cell within 30 m. Cells without retained returns remain data gaps (ground is NaN). EPT points were resolution-sampled through octree depth 7 (theoretical source spacing 1.29 m). Raster maxima use only those sampled measured returns; small buildings, trees, and other obstacles may be missed. OSM footprint building heights use the maximum elevated LiDAR return inside each footprint, potentially including roof trees/equipment. Mapped buildings without a usable height remain unknown. Building mapping and survey dates differ. Tree layer includes automatically fetched Meta/WRI satellite-derived canopy estimates (&gt;=2 m), alongside classified LiDAR canopy. Predictions can miss or overestimate trees. Unclassified LiDAR returns within satellite tree areas are inferred to be vegetation; their heights can raise the canopy estimate. Object labels and cross-date matching can be wrong.</description><Style id="path"><LineStyle><color>ff96d653</color><width>4</width></LineStyle></Style>
+<Placemark><name>A · Site A (agl)</name><description>Sightline Status: CLEAR (Direct LOS: clear)
+Distance: 250.1 m (3D: 250.4 m)
+Site A: agl (37.0 m mast, total 158.0 m)
+Site B: agl (37.0 m mast, total 170.8 m)
+Alignment: A-&gt;B 330.1° (tilt +2.9°); B-&gt;A 150.1° (tilt -2.9°)
+Viability: VIABLE
+EIRP: 46.0 dBm, FSPL: 95.7 dB, Foliage Loss: 0.0 dB
+Rx Power: -27.7 dBm, Sensitivity: -81.0 dBm
+Link Margin: +53.3 dB, SNR: 68.3 dB
+Source: USGS 3DEP EPT project CA_SanFrancisco_1_B23; © OpenStreetMap contributors, ODbL; Meta/WRI Version 2 Global Canopy Height Map (CHMv2). Absolute heights use the input LiDAR vertical datum; Google Earth terrain may differ. Ground is interpolated only into cells with retained returns and a nearest class-2 cell within 30 m. Cells without retained returns remain data gaps (ground is NaN). EPT points were resolution-sampled through octree depth 7 (theoretical source spacing 1.29 m). Raster maxima use only those sampled measured returns; small buildings, trees, and other obstacles may be missed. OSM footprint building heights use the maximum elevated LiDAR return inside each footprint, potentially including roof trees/equipment. Mapped buildings without a usable height remain unknown. Building mapping and survey dates differ. Tree layer includes automatically fetched Meta/WRI satellite-derived canopy estimates (&gt;=2 m), alongside classified LiDAR canopy. Predictions can miss or overestimate trees. Unclassified LiDAR returns within satellite tree areas are inferred to be vegetation; their heights can raise the canopy estimate. Object labels and cross-date matching can be wrong.</description><Point><altitudeMode>absolute</altitudeMode><coordinates>-122.44598393883233,37.759614647897955,158.01000213623047</coordinates></Point></Placemark>
+<Placemark><name>B · Site B (agl)</name><description>Sightline Status: CLEAR (Direct LOS: clear)
+Distance: 250.1 m (3D: 250.4 m)
+Site A: agl (37.0 m mast, total 158.0 m)
+Site B: agl (37.0 m mast, total 170.8 m)
+Alignment: A-&gt;B 330.1° (tilt +2.9°); B-&gt;A 150.1° (tilt -2.9°)
+Viability: VIABLE
+EIRP: 46.0 dBm, FSPL: 95.7 dB, Foliage Loss: 0.0 dB
+Rx Power: -27.7 dBm, Sensitivity: -81.0 dBm
+Link Margin: +53.3 dB, SNR: 68.3 dB
+Source: USGS 3DEP EPT project CA_SanFrancisco_1_B23; © OpenStreetMap contributors, ODbL; Meta/WRI Version 2 Global Canopy Height Map (CHMv2). Absolute heights use the input LiDAR vertical datum; Google Earth terrain may differ. Ground is interpolated only into cells with retained returns and a nearest class-2 cell within 30 m. Cells without retained returns remain data gaps (ground is NaN). EPT points were resolution-sampled through octree depth 7 (theoretical source spacing 1.29 m). Raster maxima use only those sampled measured returns; small buildings, trees, and other obstacles may be missed. OSM footprint building heights use the maximum elevated LiDAR return inside each footprint, potentially including roof trees/equipment. Mapped buildings without a usable height remain unknown. Building mapping and survey dates differ. Tree layer includes automatically fetched Meta/WRI satellite-derived canopy estimates (&gt;=2 m), alongside classified LiDAR canopy. Predictions can miss or overestimate trees. Unclassified LiDAR returns within satellite tree areas are inferred to be vegetation; their heights can raise the canopy estimate. Object labels and cross-date matching can be wrong.</description><Point><altitudeMode>absolute</altitudeMode><coordinates>-122.44739985590822,37.76156813851651,170.75</coordinates></Point></Placemark>
+<Placemark><name>CLEAR · 250 m</name><description>Sightline Status: CLEAR (Direct LOS: clear)
+Distance: 250.1 m (3D: 250.4 m)
+Site A: agl (37.0 m mast, total 158.0 m)
+Site B: agl (37.0 m mast, total 170.8 m)
+Alignment: A-&gt;B 330.1° (tilt +2.9°); B-&gt;A 150.1° (tilt -2.9°)
+Viability: VIABLE
+EIRP: 46.0 dBm, FSPL: 95.7 dB, Foliage Loss: 0.0 dB
+Rx Power: -27.7 dBm, Sensitivity: -81.0 dBm
+Link Margin: +53.3 dB, SNR: 68.3 dB
+Source: USGS 3DEP EPT project CA_SanFrancisco_1_B23; © OpenStreetMap contributors, ODbL; Meta/WRI Version 2 Global Canopy Height Map (CHMv2). Absolute heights use the input LiDAR vertical datum; Google Earth terrain may differ. Ground is interpolated only into cells with retained returns and a nearest class-2 cell within 30 m. Cells without retained returns remain data gaps (ground is NaN). EPT points were resolution-sampled through octree depth 7 (theoretical source spacing 1.29 m). Raster maxima use only those sampled measured returns; small buildings, trees, and other obstacles may be missed. OSM footprint building heights use the maximum elevated LiDAR return inside each footprint, potentially including roof trees/equipment. Mapped buildings without a usable height remain unknown. Building mapping and survey dates differ. Tree layer includes automatically fetched Meta/WRI satellite-derived canopy estimates (&gt;=2 m), alongside classified LiDAR canopy. Predictions can miss or overestimate trees. Unclassified LiDAR returns within satellite tree areas are inferred to be vegetation; their heights can raise the canopy estimate. Object labels and cross-date matching can be wrong.</description><styleUrl>#path</styleUrl><LineString><altitudeMode>absolute</altitudeMode><coordinates>-122.44598393883233,37.759614647897955,158.01000213623047 -122.44739985590822,37.76156813851651,170.75</coordinates></LineString></Placemark>
+</Document></kml>
