@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0d110f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sightline">
   <title>Sightline — Terrain Visibility &amp; Radio Link Planner</title>
   <meta name="description" content="Sightline analyzes line-of-sight, Fresnel clearance, and radio link budgets worldwide using terrain, mapped buildings, and satellite canopy data directly in the browser.">
   <meta property="og:type" content="website">
@@ -13,10 +18,12 @@
   <meta name="twitter:title" content="Sightline — Terrain Visibility &amp; Radio Link Planner">
   <meta name="twitter:description" content="Analyze line-of-sight and radio links over real terrain, buildings, and canopy.">
   <link rel="icon" href="./static/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./static/icon-192.png">
+  <link rel="manifest" href="./static/manifest.webmanifest">
   <link rel="stylesheet" href="./static/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="./static/style.css">
   <!-- Analytics placeholder: paste GA4 or Plausible tag below. Example: <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXX"></script> -->
-  <!-- Ads placeholder: AdSense verification / auto-ads script goes here. Do NOT add intrusive interstitials. See loadingAd notes in style.css. -->
+  <!-- Ads placeholder: AdSense verification / auto-ads script goes here. See ADS.md before enabling the in-page ad slot. -->
 </head>
 <body>
   <header class="topbar">
@@ -185,6 +192,12 @@
       <div class="utility-actions">
         <button id="exportKml">Export KML</button><button id="exportJson">Export JSON</button><button id="reset">Reset overlays</button>
       </div>
+      <!-- AdSense insertion point: replace .ad-placeholder with the exact responsive unit from AdSense,
+           then remove hidden from #contentAd. Keep ads out of the map, loading state, and controls. -->
+      <div class="content-ad" id="contentAd" hidden>
+        <small>Advertisement</small>
+        <div class="ad-placeholder">Ad placeholder — see ADS.md for setup</div>
+      </div>
     </aside>
 
     <section class="map-stage" aria-label="Terrain map">
@@ -200,16 +213,7 @@
         <span><i class="clear"></i>Clear</span><span><i class="foliage"></i>Foliage</span><span><i class="fresnel"></i>Fresnel constrained</span><span><i class="blocked"></i>Blocked</span><span><i class="unknown"></i>Unknown</span>
       </div>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
-      <div class="loading" id="loading" hidden><span class="spinner"></span><strong id="loadingTitle">Analyzing terrain</strong><small>This can take a moment on large datasets.</small>
-        <!-- AdSense insertion point: replace .ad-placeholder below with your <ins class="adsbygoogle"> unit.
-             Keep the wrapper hidden via [hidden] when not loading. To avoid CLS, the wrapper has fixed min-height
-             and does not overlay map controls — it only appears inside the modal loading overlay (z-index 700).
-             Policy: do not place ads floating over the Leaflet zoom/control bar; do not show during map interaction. -->
-        <div class="loading-ad" id="loadingAd" hidden><small>Advertisement</small><div class="ad-placeholder">Ad placeholder — replace with your AdSense / ad network code
-          <!-- Example:
-          <ins class="adsbygoogle" style="display:block; min-height:90px" data-ad-client="ca-pub-XXXXXXXX" data-ad-slot="YYYYYYYY" data-ad-format="auto" data-full-width-responsive="true"></ins>
-          <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
-          --></div></div></div>
+      <div class="loading" id="loading" hidden><span class="spinner"></span><strong id="loadingTitle">Analyzing terrain</strong><small>This can take a moment on large datasets.</small></div>
 
       <section class="results-panel" id="resultsPanel" aria-label="Analysis results">
         <header>
@@ -237,6 +241,7 @@
     <p><strong>Clear</strong> means the path clears mapped terrain and objects. <strong>Foliage</strong> means trees intersect the path. <strong>Blocked</strong> means terrain or a building obstructs it. Unknown samples stay separate.</p>
     <p>Radio mode adds Earth curvature and Fresnel clearance. Heights are meters above local ground (AGL). The viewshed samples rays on a grid, so a smaller step is more detailed and slower.</p>
     <p>The static release downloads global ground elevation from AWS Terrain Tiles, buildings from OpenFreeMap/OpenMapTiles, and Meta/WRI satellite canopy from Source Cooperative. The local Python edition can use higher-detail USGS 3DEP/LiDAR in the United States. Missing source coverage remains unknown and is disclosed in the result notes.</p>
+    <p><strong>Install on mobile:</strong> use your browser's Add to Home Screen or Install App command. Once opened online, the app shell and bundled starter area can launch offline; downloading data for a new location still requires internet access.</p>
     <p>Satellite tiles are a visual reference only. Export KML to inspect the path in Google Earth.</p>
     <p class="microcopy" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px;">Data &amp; imagery credits: Mapzen Terrain Tiles and their source datasets; Buildings: OpenFreeMap / OpenMapTiles, data &copy; OpenStreetMap contributors (ODbL); Tree canopy: Meta / WRI CHMv2 (CC BY 4.0) via Source Cooperative; Basemap source: Esri, Vantor, Earthstar Geographics, and the GIS User Community. See the <a href="./THIRD_PARTY_NOTICES.md" target="_blank" rel="noopener" style="color:var(--accent)">complete data credits</a>.</p>
   </dialog>

@@ -94,6 +94,75 @@ class StaticBuildTests(unittest.TestCase):
             r'(?:scene\s*!==\s*browserSceneData|browserSceneData\s*!==\s*scene)',
         )
 
+    def test_static_release_is_an_installable_progressive_web_app(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            output = Path(tmp) / 'release'
+            build(ROOT / 'data' / 'bay-area.npz', output)
+
+            index = (output / 'index.html').read_text()
+            manifest = json.loads((output / 'static' / 'manifest.webmanifest').read_text())
+            service_worker = (output / 'service-worker.js').read_text()
+            app = (output / 'static' / 'app.js').read_text()
+
+            self.assertIn('rel="manifest" href="./static/manifest.webmanifest"', index)
+            self.assertIn('rel="apple-touch-icon"', index)
+            self.assertIn('viewport-fit=cover', index)
+            self.assertEqual(manifest['display'], 'standalone')
+            self.assertEqual(manifest['start_url'], '../')
+            self.assertEqual(manifest['scope'], '../')
+            self.assertNotIn('id', manifest)
+            self.assertEqual(
+                {icon['sizes'] for icon in manifest['icons']},
+                {'192x192', '512x512'},
+            )
+            self.assertTrue((output / 'static' / 'icon-192.png').is_file())
+            self.assertTrue((output / 'static' / 'icon-512.png').is_file())
+            self.assertIn("navigator.serviceWorker.register('./service-worker.js', {updateViaCache: 'none'})", app)
+            self.assertIn("'./static/scene.json'", service_worker)
+            self.assertNotIn('self.skipWaiting()', service_worker)
+            self.assertNotIn('self.clients.claim()', service_worker)
+            self.assertNotIn('__SIGHTLINE_CACHE_VERSION__', service_worker)
+            self.assertIn('cache.put(APP_ENTRY, copy)', service_worker)
+            self.assertNotIn("cache.put('./index.html', copy)", service_worker)
+
+    def test_static_release_cache_revision_tracks_built_scene(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            first = Path(tmp) / 'first'
+            second = Path(tmp) / 'second'
+            build(ROOT / 'data' / 'bay-area.npz', first)
+            build(ROOT / 'data' / 'autzen.npz', second)
+            version_pattern = re.compile(r"const CACHE_NAME = 'sightline-shell-([0-9a-f]{16})'")
+            first_worker = (first / 'service-worker.js').read_text()
+            second_worker = (second / 'service-worker.js').read_text()
+            self.assertNotEqual(
+                version_pattern.search(first_worker).group(1),
+                version_pattern.search(second_worker).group(1),
+            )
+
+    def test_mobile_release_uses_safe_areas_and_touch_sized_controls(self):
+        css = (ROOT / 'static' / 'style.css').read_text()
+        app = (ROOT / 'static' / 'app.js').read_text()
+        self.assertIn('env(safe-area-inset-top)', css)
+        self.assertIn('env(safe-area-inset-bottom)', css)
+        self.assertRegex(css, r'@media\s*\(max-width:\s*680px\)')
+        self.assertRegex(css, r'@media\s*\(max-width:\s*680px\)[\s\S]*?min-height:\s*44px')
+        self.assertRegex(css, r'\.map-stage\s*\{[\s\S]{0,120}?order:\s*1')
+        self.assertRegex(css, r'\.sidebar\s*\{[\s\S]{0,220}?order:\s*2')
+        self.assertIn('42dvh', css)
+        self.assertIn('map.invalidateSize()', app)
+        narrow_mobile = css[css.index('@media (max-width: 320px)'):]
+        self.assertNotIn('bottom: 254px', narrow_mobile)
+
+    def test_ad_slot_is_in_document_flow_instead_of_loading_overlay(self):
+        index = (ROOT / 'static' / 'index.html').read_text()
+        loading = re.search(
+            r'<div class="loading"[\s\S]*?</div>\s*<section class="results-panel"',
+            index,
+        )
+        self.assertIsNotNone(loading)
+        self.assertNotIn('ad-placeholder', loading.group(0))
+        self.assertIn('class="content-ad" id="contentAd" hidden', index)
+
 
 if __name__ == '__main__':
     unittest.main()

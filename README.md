@@ -90,6 +90,8 @@ Upload `dist/` to Cloudflare Pages, Netlify, GitHub Pages at a root/custom domai
 
 The static release caches downloaded responses plus decoded terrain and building tiles, so repeated or slightly shifted requests reuse prior work. Terrain, buildings, and canopy are fetched in parallel where their dependencies allow. Disabling **Include foliage** skips canopy downloads; enabling it later automatically refreshes the active coverage. Viewshed loads defer the hidden terrain/object overlay images until path mode needs them.
 
+The static release is installable as a progressive web app. After one online launch, its interface and bundled starter scene can open offline; new-location terrain, buildings, canopy, search, and satellite imagery still require internet access. See `ADS.md` before adding advertising code.
+
 ## Verify
 
 ```sh

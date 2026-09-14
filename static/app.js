@@ -610,6 +610,13 @@
   map.createPane('pathPane');
   map.getPane('pathPane').style.zIndex = '450';
   map.setView([44.0521,-123.0868], 13);
+  let mapResizeFrame = 0;
+  const resizeMap = () => {
+    cancelAnimationFrame(mapResizeFrame);
+    mapResizeFrame = requestAnimationFrame(() => map.invalidateSize());
+  };
+  window.addEventListener('resize', resizeMap);
+  window.addEventListener('orientationchange', resizeMap);
 
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:20, attribution:'&copy; OpenStreetMap contributors'});
   const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -624,8 +631,6 @@
   function setBusy(on, title='Analyzing terrain') {
     $('loadingTitle').textContent=title;
     $('loading').hidden=!on;
-    const ad = $('loadingAd');
-    if (ad) ad.hidden = !on; // show ad placeholder only while loading
   }
   let toastTimer;
   function toast(message, error=false) {
@@ -2810,6 +2815,13 @@
   });
 
   const help=$('helpDialog');$('helpButton').addEventListener('click',()=>help.showModal());help.querySelector('.dialog-close').addEventListener('click',()=>help.close());help.addEventListener('click',e=>{if(e.target===help)help.close()});
+  if (staticMode && 'serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js', {updateViaCache: 'none'}).catch(error => {
+        console.warn('[Sightline] offline app setup failed', error);
+      });
+    });
+  }
   initScrubber();
   updateAnalysisModeUI();
   updateRadioFieldsState();

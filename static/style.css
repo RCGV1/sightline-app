@@ -21,6 +21,12 @@ body {
   height: 100%;
   margin: 0;
 }
+@supports (height: 100dvh) {
+  html,
+  body {
+    height: 100dvh;
+  }
+}
 body {
   overflow: hidden;
   background: var(--bg);
@@ -803,24 +809,21 @@ dialog h2 {
   color: var(--muted);
   margin-top: 5px;
 }
-/* AdSense-ready placeholder: reserve space to avoid CLS (min-height 110px incl label).
-   Instructions: replace .ad-placeholder innerHTML with your <ins class="adsbygoogle"> unit and
-   include the AdSense script in <head>. Keep #loadingAd hidden when not loading
-   (JS toggles [hidden]). Do not move this ad to float over .map-tools or .legend —
-   policy forbids ads obscuring interactive map controls. This placement only shows
-   inside the modal loading overlay (z-index 700), never during map pan/analysis. */
-.loading-ad {
-  margin-top: 18px;
+/* Optional in-page ad slot. Its fixed minimum height prevents layout shift once enabled. */
+.content-ad {
+  margin-top: 28px;
   padding: 10px 14px;
-  background: #0e1513ee;
+  background: #0e1513;
   border: 1px solid var(--line);
   border-radius: 6px;
   text-align: center;
-  min-width: 280px;
-  max-width: 90%;
+  width: 100%;
   min-height: 110px;
 }
-.loading-ad small {
+.content-ad[hidden] {
+  display: none;
+}
+.content-ad small {
   display: block;
   color: var(--muted);
   font-size: 9px;
@@ -1341,12 +1344,14 @@ dialog p {
 @media (max-width: 680px) {
   body {
     overflow: auto;
+    overscroll-behavior-y: none;
   }
   .topbar {
     position: sticky;
     top: 0;
     gap: 10px;
-    padding: 0 10px;
+    height: calc(56px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
   }
   .search-container {
     min-width: 0;
@@ -1354,22 +1359,38 @@ dialog p {
     max-width: none;
   }
   .search-input-wrap {
-    height: 34px;
+    height: 44px;
+  }
+  .search-submit,
+  .search-clear,
+  .icon-button,
+  .button,
+  .segmented button,
+  .utility-actions button,
+  .area-data-drawer summary,
+  .rf-equipment-details summary,
+  input,
+  select {
+    min-height: 44px;
+  }
+  .icon-button {
+    min-width: 44px;
   }
   .dataset {
     display: none;
   }
   .workspace {
     height: auto;
-    min-height: calc(100vh - 56px);
+    min-height: calc(100dvh - 56px - env(safe-area-inset-top));
     display: flex;
     flex-direction: column;
   }
   .sidebar {
+    order: 2;
     width: 100%;
     max-height: none;
     border-right: 0;
-    padding: 14px 12px 16px;
+    padding: 14px max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
   .control-section {
     padding: 14px 0 16px;
@@ -1388,13 +1409,16 @@ dialog p {
     gap: 6px;
   }
   .map-stage {
-    height: 68vh;
+    order: 1;
+    height: calc(100dvh - 56px - env(safe-area-inset-top));
     min-height: 520px;
   }
   .results-panel {
     left: 8px;
     right: 8px;
-    bottom: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    max-height: 42dvh;
+    overflow-y: auto;
   }
   .results-panel header {
     padding: 7px 8px;
@@ -1435,8 +1459,8 @@ dialog p {
   }
   .legend {
     display: flex;
-    top: auto;
-    bottom: 250px;
+    top: 62px;
+    bottom: auto;
     left: 8px;
     right: 8px;
     max-width: none;
@@ -1449,21 +1473,32 @@ dialog p {
     z-index: 560;
   }
   .map-tools {
-    max-width: calc(100% - 16px);
+    left: 8px;
+    right: 8px;
+    transform: none;
+    max-width: none;
     top: 10px;
     padding: 3px 4px;
     gap: 3px;
     border-radius: 7px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
+  .map-tools::-webkit-scrollbar { display: none; }
   .map-tools button {
-    padding: 5px 7px;
+    min-height: 44px;
+    padding: 5px 9px;
     font-size: 9.5px;
   }
   .map-tools > span {
     display: none;
   }
   .map-tools label {
-    padding: 3px 5px;
+    min-height: 44px;
+    padding: 3px 7px;
     font-size: 9.5px;
   }
   .chart-wrap {
@@ -1490,6 +1525,26 @@ dialog p {
     font-size: 8.5px;
     padding: 5px 8px;
   }
+  .results-panel > header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #101614;
+  }
+  .leaflet-control-zoom a,
+  .leaflet-control-locate a {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+  }
+  dialog {
+    width: calc(100% - 24px);
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+    overflow-y: auto;
+  }
+  .site-footer {
+    display: none;
+  }
 }
 @media (max-width: 380px) {
   .field-grid.three {
@@ -1507,6 +1562,9 @@ dialog p {
   .brand {
     font-size: 11px;
     letter-spacing: 0.12em;
+  }
+  .brand > span:last-child {
+    display: none;
   }
   .search-input::placeholder {
     font-size: 11px;
@@ -1543,7 +1601,7 @@ dialog p {
     gap: 4px 6px;
     font-size: 7.5px;
     padding: 5px 6px;
-    bottom: 254px;
+    bottom: auto;
   }
 }
 

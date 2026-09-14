@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build Sightline's no-server global browser release with a starter scene."""
 import argparse
+import hashlib
 from html import escape as html_escape
 import json
 from pathlib import Path
@@ -58,6 +59,13 @@ def build(scene_path, output, base_url=''):
         '/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: geolocation=(self)\n\n/static/scene.json\n  Cache-Control: public, max-age=3600\n\n/static/*.js\n  Cache-Control: public, max-age=3600\n\n/static/*.css\n  Cache-Control: public, max-age=3600\n',
         encoding='utf-8',
     )
+    digest = hashlib.sha256()
+    for path in sorted(item for item in output.rglob('*') if item.is_file()):
+        digest.update(path.relative_to(output).as_posix().encode('utf-8'))
+        digest.update(path.read_bytes())
+    worker = (ROOT / 'static' / 'service-worker.js').read_text(encoding='utf-8')
+    worker = worker.replace('__SIGHTLINE_CACHE_VERSION__', digest.hexdigest()[:16])
+    (output / 'service-worker.js').write_text(worker, encoding='utf-8')
     return output
 
 
