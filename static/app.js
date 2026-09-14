@@ -695,12 +695,23 @@
   let toastTimer;
   function toast(message, error=false) {
     const el=$('toast');
+    delete el.dataset.action;
     el.textContent=message;
     el.className=`toast show${error?' error':''}`;
     clearTimeout(toastTimer);
     toastTimer=setTimeout(()=>el.className='toast', error ? 6000 : 3500);
   }
-  if ($('toast')) $('toast').addEventListener('click', () => $('toast').className = 'toast');
+  function showUpdateReady() {
+    const el = $('toast');
+    el.dataset.action = 'reload';
+    el.textContent = 'Update ready — tap to reload';
+    el.className = 'toast show';
+    clearTimeout(toastTimer);
+  }
+  if ($('toast')) $('toast').addEventListener('click', () => {
+    if ($('toast').dataset.action === 'reload') window.location.reload();
+    else $('toast').className = 'toast';
+  });
   async function api(url, options={}) { const res=await fetch(url,options); if(!res.ok){let message=`Request failed (${res.status})`;try{message=(await res.json()).error||message}catch{}throw new Error(message)} return res; }
   const num = id => $(id).value.trim()===''?NaN:Number($(id).value);
   const fmt = (n,d=1) => n!==null && n!=='' && Number.isFinite(Number(n)) ? Number(n).toLocaleString(undefined,{maximumFractionDigits:d}) : '—';
@@ -2888,6 +2899,10 @@
 
   const help=$('helpDialog');$('helpButton').addEventListener('click',()=>help.showModal());help.querySelector('.dialog-close').addEventListener('click',()=>help.close());help.addEventListener('click',e=>{if(e.target===help)help.close()});
   if (staticMode && 'serviceWorker' in navigator) {
+    const hadServiceWorker = Boolean(navigator.serviceWorker.controller);
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadServiceWorker) showUpdateReady();
+    });
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./service-worker.js', {updateViaCache: 'none'}).catch(error => {
         console.warn('[Sightline] offline app setup failed', error);

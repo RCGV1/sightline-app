@@ -376,6 +376,33 @@ def kml(scene, p):
 </Document></kml>'''.encode()
 
 
+def render_scene_asset(path, render):
+    """Render and cache an asset only while its scene remains current."""
+    while True:
+        with LOCK:
+            cached = IMAGES.get(path)
+            if cached is not None:
+                return cached
+            scene = SCENE
+        if scene is None:
+            return None
+        payload = render(scene)
+        with LOCK:
+            if SCENE is scene:
+                IMAGES[path] = payload
+                return payload
+
+
+class BrowserSceneTooLarge(Exception):
+    pass
+
+
+def render_browser_scene(scene):
+    if scene.h * scene.w > 500000:
+        raise BrowserSceneTooLarge
+    return json.dumps(scene_manifest(scene), allow_nan=False, separators=(',', ':')).encode()
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         logger.info("%s - - [%s] %s" %
@@ -488,28 +515,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200,meta)
             if path=='/api/scene':
                 with LOCK:
-                    if path in IMAGES:
-                        return self.send(200,IMAGES[path],'application/json',cache='public, max-age=3600')
                     scene=SCENE
                 if scene is None:
                     return self.send(503,{'error':'No terrain dataset loaded. Fetch an area or wait for startup to complete.'})
-                if scene.h * scene.w > 500000:
+                try:
+                    payload = render_scene_asset(path, render_browser_scene)
+                except BrowserSceneTooLarge:
                     return self.send(413,{'error':'The active scene is too large for browser analysis. Use the server engine or fetch a smaller/coarser scene.'})
-                payload=json.dumps(scene_manifest(scene),allow_nan=False,separators=(',',':')).encode()
-                with LOCK:
-                    IMAGES[path]=payload
                 return self.send(200,payload,'application/json',cache='public, max-age=3600')
             if path in ('/api/image','/api/classes'):
-                with LOCK:
-                    if path in IMAGES:
-                        return self.send(200,IMAGES[path],'image/png', cache='public, max-age=3600')
-                    scene=SCENE
+                with LOCK: scene=SCENE
                 if scene is None:
                     return self.send(503,{'error':'No terrain dataset loaded. Fetch an area or wait for startup to complete.'})
-                # heavy work outside LOCK
-                img = map_image(scene, path.endswith('classes'))
-                with LOCK:
-                    IMAGES[path]=img
+                img = render_scene_asset(path, lambda current: map_image(current, path.endswith('classes')))
                 return self.send(200,img,'image/png', cache='public, max-age=3600')
             file=(ROOT/'static'/('index.html' if path=='/' else path.removeprefix('/static/').lstrip('/'))).resolve()
             if not file.is_relative_to(ROOT/'static') or not file.is_file(): return self.send(404,{'error':'Not found.'})

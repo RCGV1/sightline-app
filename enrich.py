@@ -43,7 +43,8 @@ def fuse_layers(ground,buildings,trees,unknown,labels,canopy,tag_heights=None,fa
     assign=canopy_mask&np.isfinite(unknown)
     trees[assign]=np.fmax(trees[assign],unknown[assign])
     unknown[assign]=np.nan
-    return buildings,trees,unknown,uncertain
+    canopy_uncertain=np.isfinite(ground)&~np.isfinite(canopy)&~np.isfinite(trees)&~np.isfinite(buildings)
+    return buildings,trees,unknown,uncertain,canopy_uncertain
 
 
 def enrich_scene(path,progress=None):
@@ -67,7 +68,7 @@ def enrich_scene(path,progress=None):
     # height now stay unknown (honest) instead of invented 7.5m. Only explicit
     # OSM height tags are used.
     fallback_h = None
-    arrays['buildings'],arrays['trees'],arrays['unknown'],arrays['uncertain']=fuse_layers(
+    arrays['buildings'],arrays['trees'],arrays['unknown'],arrays['uncertain'],arrays['canopy_uncertain']=fuse_layers(
         arrays['ground'],arrays['buildings'],arrays['trees'],arrays['unknown'],labels,canopy,
         tag_heights=tag_heights,fallback_height=fallback_h
     )

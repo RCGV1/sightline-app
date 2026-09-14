@@ -33,6 +33,25 @@ class EngineTest(unittest.TestCase):
         self.opts['mode']='optical'
         self.assertEqual(trace(self.s,self.a,self.b,self.opts)['status'],'blocked')
 
+    def test_foliage_disabled_excludes_canopy_from_optical_path(self):
+        self.s.trees[4,40:60]=20
+        result=trace(self.s,self.a,self.b,settings({
+            'mode':'optical','height_a':10,'height_b':10,'include_foliage':False
+        }))
+        self.assertEqual(result['status'],'clear')
+        self.assertEqual(result['foliage_m'],0)
+
+    def test_canopy_source_uncertainty_only_affects_foliage_enabled_paths(self):
+        self.s.canopy_uncertain=np.ones(self.s.ground.shape,dtype=bool)
+        included=trace(self.s,self.a,self.b,settings({
+            'mode':'optical','height_a':10,'height_b':10,'include_foliage':True
+        }))
+        excluded=trace(self.s,self.a,self.b,settings({
+            'mode':'optical','height_a':10,'height_b':10,'include_foliage':False
+        }))
+        self.assertEqual(included['status'],'unknown')
+        self.assertEqual(excluded['status'],'clear')
+
     def test_slope_partial_canopy(self):
         self.s.trees[:]=15
         self.opts.update(height_a=10,height_b=20)
@@ -303,6 +322,17 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(len(r['bounds']), 2)
         total_pts = sum(r['counts'].values())
         self.assertGreater(total_pts, 1000)
+
+    def test_viewshed_keeps_dateline_bounds_local_to_origin(self):
+        h=w=200
+        ground=np.zeros((h,w),dtype=np.float32)
+        empty=np.full_like(ground,np.nan)
+        dateline=Scene(ground,empty.copy(),empty.copy(),empty.copy(),np.zeros((h,w,3),dtype=np.uint8),dict(
+            resolution_m=1,xmin=0,ymax=h,
+            crs='+proj=tmerc +lat_0=0 +lon_0=179.9999 +k=1 +x_0=100 +y_0=100 +datum=WGS84 +units=m +no_defs'
+        ))
+        result=viewshed(dateline,{'a':[0,179.9999],'radius_m':50,'step_m':5})
+        self.assertLess(result['bounds'][1][1]-result['bounds'][0][1],.01)
 
     def test_trace_fast_path_detailed_false(self):
         r_full = trace(self.s, self.a, self.b, self.opts, detailed=True)

@@ -8,7 +8,7 @@ class EnrichmentTests(unittest.TestCase):
         g=np.zeros((2,4),dtype=np.float32);empty=np.full_like(g,np.nan)
         unknown=empty.copy();unknown[0,0]=12
         labels=np.array([[1,1,2,2],[1,1,2,2]],dtype=np.int32)
-        b,t,u,q=fuse_layers(g,empty,empty,unknown,labels,empty)
+        b,t,u,q,_=fuse_layers(g,empty,empty,unknown,labels,empty)
         np.testing.assert_array_equal(b[:,:2],12)
         self.assertTrue(np.isnan(u[0,0]));self.assertTrue(q[:,2:].all())
 
@@ -16,10 +16,17 @@ class EnrichmentTests(unittest.TestCase):
         g=np.zeros((1,4));b=np.array([[8,np.nan,np.nan,np.nan]])
         trees=np.full_like(g,np.nan);u=np.array([[np.nan,12,25,np.nan]])
         canopy=np.full_like(g,20);labels=np.zeros((1,4),dtype=np.int32)
-        bb,t,uu,q=fuse_layers(g,b,trees,u,labels,canopy)
+        bb,t,uu,q,_=fuse_layers(g,b,trees,u,labels,canopy)
         self.assertTrue(np.isnan(t[0,0]));self.assertEqual(bb[0,0],8)
         self.assertTrue(np.isnan(uu[0,1]));self.assertTrue(np.isnan(uu[0,2]));self.assertEqual(t[0,2],25)
         self.assertEqual(t[0,3],20)
+
+    def test_missing_canopy_is_reported_separately_from_building_uncertainty(self):
+        g=np.zeros((1,3),dtype=np.float32)
+        empty=np.full_like(g,np.nan)
+        result=fuse_layers(g,empty,empty,empty,np.zeros((1,3),dtype=np.int32),empty)
+        self.assertFalse(result[3].any())
+        self.assertTrue(result[-1].all())
 
     def test_footprint_courtyard_preserved(self):
         def ring(coords):return [{'lon':x,'lat':y} for x,y in coords]

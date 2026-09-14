@@ -23,6 +23,7 @@ class Scene:
     rgb: np.ndarray
     meta: dict
     uncertain: np.ndarray = None
+    canopy_uncertain: np.ndarray = None
 
     def __post_init__(self):
         self.to_xy = Transformer.from_crs('EPSG:4326', self.meta['crs'], always_xy=True)
@@ -30,11 +31,17 @@ class Scene:
         self.res = float(self.meta['resolution_m'])
         self.h, self.w = self.ground.shape
         if self.uncertain is None: self.uncertain=np.zeros(self.ground.shape,dtype=bool)
+        if self.canopy_uncertain is None: self.canopy_uncertain=np.zeros(self.ground.shape,dtype=bool)
 
     @classmethod
     def load(cls, path):
         with np.load(path, allow_pickle=False) as d:
-            return cls(*(d[k].copy() for k in ('ground', 'buildings', 'trees', 'unknown', 'rgb')), json.loads(str(d['meta'])),d['uncertain'].copy() if 'uncertain' in d else None)
+            return cls(
+                *(d[k].copy() for k in ('ground', 'buildings', 'trees', 'unknown', 'rgb')),
+                json.loads(str(d['meta'])),
+                d['uncertain'].copy() if 'uncertain' in d else None,
+                d['canopy_uncertain'].copy() if 'canopy_uncertain' in d else None,
+            )
 
     def xy(self, latlon):
         if not isinstance(latlon, (list, tuple)) or len(latlon) != 2:
@@ -111,6 +118,7 @@ def settings(p):
         frequency_mhz=915 if mode == 'optical' else number(p, 'frequency_mhz', 915, 0.1, 1000000),
         k_factor=1.0 if mode == 'optical' else number(p, 'k_factor', 4/3, 0.1, 10),
         foliage_db_m=0 if mode == 'optical' else number(p, 'foliage_db_m', 0.2, 0, 100),
+        include_foliage=p.get('include_foliage') is not False,
         mode=mode
     )
     if mode == 'radio':
@@ -196,12 +204,12 @@ def trace(scene, a, b, opts, detailed=True):
     blocked = bool(np.any(valid & (clearances <= 0)))
     if opts.get('target_surface') == 'ground' and np.isfinite(b_b):
         blocked = True
-    unknown_hit = bool(np.any(~valid) or np.any(valid & scene.uncertain[rr, cc]) or np.any(valid & np.isfinite(unknown) & (minimum <= unknown)))
+    unknown_hit = bool(np.any(~valid) or np.any(valid & scene.uncertain[rr, cc]) or (opts['include_foliage'] and np.any(valid & scene.canopy_uncertain[rr, cc])) or np.any(valid & np.isfinite(unknown) & (minimum <= unknown)))
     if not detailed and blocked:
         return dict(status='blocked', direct_status='blocked', foliage_m=0.0)
     # Integrate exact path length inside each ground-to-canopy envelope.
     foliage_fraction = np.zeros(len(lo))
-    for i in np.flatnonzero(valid & np.isfinite(trees) & (minimum < trees)):
+    for i in np.flatnonzero(valid & opts['include_foliage'] & np.isfinite(trees) & (minimum < trees)):
         cuts = [float(lo[i]), float(hi[i])]
         # Both ground and canopy roots bound the modeled vegetation volume.
         for surface in (g[i], trees[i]):
@@ -504,7 +512,7 @@ def trace(scene, a, b, opts, detailed=True):
             for t in (lo[i], hi[i]):
                 bulge = curvature * t * (1 - t)
                 def elev(v): return float(v + bulge) if valid[i] and np.isfinite(v) else None
-                profile.append(dict(distance_m=float(t * d), ground_m=elev(g[i]), building_m=elev(buildings[i]), tree_m=elev(trees[i]), ray_m=float(z0 + (z1 - z0) * t), fresnel_m=float(math.sqrt(max(0, wave * d * t * (1 - t)))) if opts['mode'] == 'radio' else 0, unknown=not bool(valid[i]) or bool(scene.uncertain[rr[i], cc[i]]) or bool(np.isfinite(unknown[i]) and minimum[i] <= unknown[i])))
+                profile.append(dict(distance_m=float(t * d), ground_m=elev(g[i]), building_m=elev(buildings[i]), tree_m=elev(trees[i]), ray_m=float(z0 + (z1 - z0) * t), fresnel_m=float(math.sqrt(max(0, wave * d * t * (1 - t)))) if opts['mode'] == 'radio' else 0, unknown=not bool(valid[i]) or bool(scene.uncertain[rr[i], cc[i]]) or bool(opts['include_foliage'] and scene.canopy_uncertain[rr[i], cc[i]]) or bool(np.isfinite(unknown[i]) and minimum[i] <= unknown[i])))
         result['profile'] = profile
     return result
 
@@ -557,8 +565,10 @@ def viewshed(scene,p):
         raise ValueError(f'This viewshed would evaluate {n*n:,} locations. Increase step_m to at least {math.ceil(2*radius/MAX_VIEWSHED_SIDE)} m or reduce radius. There is no fixed distance cap within 500 km.')
     # Geographic output grid aligns precisely with a Leaflet image overlay. Uses local transverse-Mercator projection;
     # accuracy decreases with distance – results beyond ~50 km need independent validation.
+    lon_a, _ = scene.to_ll.transform(*a)
+    def unwrap_lon(lon): return lon + 360 * round((lon_a - lon) / 360)
     corners=[scene.to_ll.transform(a[0]+dx*radius,a[1]+dy*radius) for dx in (-1,1) for dy in (-1,1)]
-    west=min(v[0] for v in corners); east=max(v[0] for v in corners)
+    west=min(unwrap_lon(v[0]) for v in corners); east=max(unwrap_lon(v[0]) for v in corners)
     south=min(v[1] for v in corners); north=max(v[1] for v in corners)
     lon=west+(np.arange(n)+.5)/n*(east-west)
     lat=north-(np.arange(n)+.5)/n*(north-south)
@@ -650,7 +660,7 @@ def map_image(scene, classes=False):
         out[np.isfinite(scene.trees[r,c])]=[66,212,135,160]
         out[np.isfinite(scene.buildings[r,c])]=[85,145,215,180]
         out[np.isfinite(scene.unknown[r,c])]=[163,169,181,160]
-        out[~np.isfinite(scene.ground[r,c]) | scene.uncertain[r,c]]=[120,130,147,160]
+        out[~np.isfinite(scene.ground[r,c]) | scene.uncertain[r,c] | scene.canopy_uncertain[r,c]]=[120,130,147,160]
     else:
         out[:,:,:3]=scene.rgb[r,c]; out[:,:,3]=255
     out[~inside]=0
@@ -675,4 +685,5 @@ def scene_manifest(scene):
         'trees': grid(scene.trees),
         'unknown': grid(scene.unknown),
         'uncertain': grid(scene.uncertain),
+        'canopy_uncertain': grid(scene.canopy_uncertain),
     }

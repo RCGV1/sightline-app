@@ -121,7 +121,9 @@ class StaticBuildTests(unittest.TestCase):
             self.assertIn("'./static/scene.json'", service_worker)
             self.assertIn('self.skipWaiting()', service_worker)
             self.assertIn('self.clients.claim()', service_worker)
-            self.assertIn('client.navigate(client.url)', service_worker)
+            self.assertNotIn('client.navigate(client.url)', service_worker)
+            self.assertIn("navigator.serviceWorker.addEventListener('controllerchange'", app)
+            self.assertIn("el.dataset.action = 'reload'", app)
             self.assertNotIn('__SIGHTLINE_CACHE_VERSION__', service_worker)
             self.assertIn('cache.put(APP_ENTRY, copy)', service_worker)
             self.assertNotIn("cache.put('./index.html', copy)", service_worker)
@@ -207,15 +209,13 @@ class StaticBuildTests(unittest.TestCase):
         self.assertIn('right: env(safe-area-inset-right)', css)
         self.assertIn('right: max(8px, env(safe-area-inset-right))', css)
 
-    def test_ad_slot_is_in_document_flow_instead_of_loading_overlay(self):
+    def test_release_has_no_ad_placeholder(self):
         index = (ROOT / 'static' / 'index.html').read_text()
-        loading = re.search(
-            r'<div class="loading"[\s\S]*?</div>\s*<section class="results-panel"',
-            index,
-        )
-        self.assertIsNotNone(loading)
-        self.assertNotIn('ad-placeholder', loading.group(0))
-        self.assertIn('class="content-ad" id="contentAd" hidden', index)
+        css = (ROOT / 'static' / 'style.css').read_text()
+        for value in ('AdSense', 'Advertisement', 'contentAd', 'ad-placeholder'):
+            self.assertNotIn(value, index)
+        self.assertNotIn('.content-ad', css)
+        self.assertNotIn('.ad-placeholder', css)
 
 
 if __name__ == '__main__':

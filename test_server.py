@@ -41,6 +41,85 @@ class ServerTests(unittest.TestCase):
         self.assertIn(None, (v for row in manifest['buildings'] for v in row))
         self.assertEqual(manifest['meta']['resolution_m'], server.SCENE.meta['resolution_m'])
 
+    def test_browser_scene_rejects_oversized_current_scene(self):
+        old_scene = server.SCENE
+        old_images = server.IMAGES
+        try:
+            oversized = type('OversizedScene', (), {'h': 1, 'w': 500001})()
+            with server.LOCK:
+                server.SCENE = oversized
+                server.IMAGES = {}
+            code, data = self.request('GET', '/api/scene')
+            self.assertEqual(code, 413)
+            self.assertIn('too large', json.loads(data)['error'])
+        finally:
+            with server.LOCK:
+                server.SCENE = old_scene
+                server.IMAGES = old_images
+
+    def test_scene_renders_retry_when_the_scene_changes_during_rendering(self):
+        """A slow render must not publish or return data from a replaced scene."""
+        old_scene = server.SCENE
+        replacement = Scene.load(Path(__file__).parent / 'data' / 'bay-area.npz')
+        old_images = server.IMAGES
+        try:
+            for path, renderer, args in (
+                ('/api/scene', 'scene_manifest', ()),
+                ('/api/image', 'map_image', (False,)),
+                ('/api/classes', 'map_image', (True,)),
+            ):
+                with self.subTest(path=path):
+                    started = threading.Event()
+                    release = threading.Event()
+                    original = getattr(server, renderer)
+
+                    def block_old_render(scene, *render_args, **render_kwargs):
+                        if scene is old_scene and not started.is_set():
+                            started.set()
+                            if not release.wait(timeout=5):
+                                raise RuntimeError('test did not release blocked render')
+                        return original(scene, *render_args, **render_kwargs)
+
+                    with server.LOCK:
+                        server.SCENE = old_scene
+                        server.IMAGES = {}
+                    setattr(server, renderer, block_old_render)
+                    request_thread = None
+                    try:
+                        response = {}
+                        request_thread = threading.Thread(
+                            target=lambda: response.setdefault('value', self.request('GET', path)),
+                        )
+                        request_thread.start()
+                        self.assertTrue(started.wait(timeout=5), f'{path} did not begin rendering')
+                        with server.LOCK:
+                            server.SCENE = replacement
+                            server.IMAGES.clear()
+                        release.set()
+                        request_thread.join(timeout=5)
+                        self.assertFalse(request_thread.is_alive(), f'{path} request did not complete')
+                        self.assertIn('value', response)
+                        code, data = response['value']
+                        self.assertEqual(code, 200)
+
+                        if path == '/api/scene':
+                            self.assertEqual(json.loads(data)['meta']['name'], replacement.meta['name'])
+                        else:
+                            self.assertEqual(data, original(replacement, *args))
+
+                        code, cached = self.request('GET', path)
+                        self.assertEqual(code, 200)
+                        self.assertEqual(cached, data)
+                    finally:
+                        release.set()
+                        if request_thread is not None:
+                            request_thread.join(timeout=5)
+                        setattr(server, renderer, original)
+        finally:
+            with server.LOCK:
+                server.SCENE = old_scene
+                server.IMAGES = old_images
+
     def test_health_and_presets(self):
         code, data = self.request('GET', '/api/health')
         self.assertEqual(code, 200)
