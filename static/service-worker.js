@@ -29,16 +29,22 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(SHELL_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(
-        keys.filter(key => key.startsWith('sightline-shell-') && key !== CACHE_NAME)
-          .map(key => caches.delete(key))
-      ))
+      .then(async keys => {
+        const staleKeys = keys.filter(key => key.startsWith('sightline-shell-') && key !== CACHE_NAME);
+        await Promise.all(staleKeys.map(key => caches.delete(key)));
+        await self.clients.claim();
+        if (staleKeys.length) {
+          const windows = await self.clients.matchAll({type:'window'});
+          await Promise.all(windows.map(client => client.navigate(client.url).catch(() => undefined)));
+        }
+      })
   );
 });
 
