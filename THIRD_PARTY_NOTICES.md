@@ -18,6 +18,7 @@
   - United Kingdom: © Environment Agency copyright and/or database right 2015. All rights reserved.
   - United States 3DEP and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey.
 - Global browser buildings use OpenFreeMap vector tiles in the OpenMapTiles schema with OpenStreetMap data. OpenFreeMap is MIT licensed; OpenMapTiles schema attribution and the OSM ODbL attribution apply.
+- When vector tiles have no usable building roofs, the browser may request a bounded OpenStreetMap API map response for building footprints. That data is also © OpenStreetMap contributors and available under the ODbL.
 - Browser vector decoding loads `@mapbox/vector-tile` (BSD-3-Clause) and `pbf` (BSD-3-Clause) from a version-pinned jsDelivr URL. Canopy COG decoding loads GeoTIFF.js (MIT) from a version-pinned jsDelivr URL.
 - The browser canopy source is the Meta/WRI CHMv2 cloud-native mirror maintained by Taylor Geospatial on Source Cooperative.
 - Esri World Imagery is loaded as a third-party basemap. Service attribution: Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community.

@@ -6,6 +6,7 @@ const MAX_TERRAIN_TILES = 48;
 const MAX_BUILDING_TILES = 64;
 const TERRAIN_ROOT = 'https://elevation-tiles-prod.s3.amazonaws.com/terrarium';
 const OPENFREE_TILEJSON = 'https://tiles.openfreemap.org/planet';
+const OSM_MAP_API = 'https://api.openstreetmap.org/api/0.6/map';
 const CHM_ROOT = 'https://data.source.coop/tge-labs/meta-chm-v2/chm';
 const MVT_MODULE = 'https://cdn.jsdelivr.net/npm/@mapbox/vector-tile@2.0.4/+esm';
 const PBF_MODULE = 'https://cdn.jsdelivr.net/npm/pbf@4.0.1/+esm';
@@ -15,6 +16,7 @@ export const FETCH_CACHE_LIMIT = 128;
 const TERRAIN_PIXEL_CACHE_LIMIT = 64;
 const BUILDING_FEATURE_CACHE_LIMIT = 72;
 const CANOPY_IMAGE_CACHE_LIMIT = 12;
+const MAX_OSM_MAP_FALLBACK_AREA_M2 = 25_000_000;
 
 const memory = new Map();
 const terrainPixels = new Map();
@@ -44,8 +46,14 @@ export function decodeTerrariumPixel(red, green, blue) {
   return Number(red) * 256 + Number(green) + Number(blue) / 256 - 32768;
 }
 
+function parseBuildingLength(value) {
+  if (finite(Number(value)) && Number(value) > 0) return Number(value);
+  const match = String(value ?? '').trim().match(/^(\d+(?:\.\d+)?)\s*(m|metres?|meters?)$/i);
+  return match ? Number(match[1]) : null;
+}
+
 export function parseBuildingHeight(properties = {}) {
-  const direct = Number(properties.render_height ?? properties.height);
+  const direct = parseBuildingLength(properties.render_height ?? properties.height);
   if (finite(direct) && direct > 0) return direct;
   const levels = Number(properties['building:levels'] ?? properties.levels);
   return finite(levels) && levels > 0 ? levels * 3.5 : null;
@@ -54,6 +62,21 @@ export function parseBuildingHeight(properties = {}) {
 export function isRenderableBuilding(properties = {}) {
   const hidden = properties.hide_3d;
   return !(hidden === true || hidden === 1 || String(hidden).toLowerCase() === 'true');
+}
+
+export function parseOsmMapBuildings(document) {
+  if (document?.documentElement?.nodeName !== 'osm') throw new Error('OpenStreetMap returned an invalid building response.');
+  const nodes = new Map([...document.getElementsByTagName('node')].map(node => [
+    node.getAttribute('id'), [Number(node.getAttribute('lon')), Number(node.getAttribute('lat'))],
+  ]));
+  return [...document.getElementsByTagName('way')].flatMap(way => {
+    const tags = Object.fromEntries([...way.getElementsByTagName('tag')].map(tag => [tag.getAttribute('k'), tag.getAttribute('v')]));
+    if ((!tags.building && !tags['building:part']) || tags.building === 'no' || !isRenderableBuilding(tags)) return [];
+    const refs = [...way.getElementsByTagName('nd')].map(node => node.getAttribute('ref'));
+    const ring = refs.map(ref => nodes.get(ref));
+    if (ring.length < 4 || refs[0] !== refs.at(-1) || ring.some(point => !point || !finite(point[0]) || !finite(point[1]))) return [];
+    return [{ polygons: [[ring]], height: parseBuildingHeight(tags) }];
+  });
 }
 
 function validatePoint(point, label) {
@@ -287,9 +310,26 @@ function fillPolygon(plan, rings, height, ground, buildings, uncertain) {
   }
 }
 
-async function fetchBuildings(plan, fetchImpl, progress, deps = null) {
+async function fetchBuildings(plan, fetchImpl, progress, deps = null, osmMapParser = null) {
   const buildings = new Float32Array(plan.width * plan.height); buildings.fill(NaN);
   const uncertain = new Uint8Array(plan.width * plan.height);
+  const fallback = async primary => {
+    if (primary.heightedFeatures) return primary;
+    const osm = await fetchOsmMapBuildings(plan, fetchImpl, osmMapParser);
+    if (osm.status !== 'available') {
+      uncertain.fill(1);
+      return { ...primary, status: `${primary.status}; OpenStreetMap API fallback ${osm.status}` };
+    }
+    for (const feature of osm.features) {
+      for (const polygon of feature.polygons) fillPolygon(plan, polygon, feature.height, plan.ground, buildings, uncertain);
+    }
+    return {
+      ...primary,
+      features: primary.features + osm.features.length,
+      heightedFeatures: osm.features.filter(feature => finite(feature.height)).length,
+      status: 'available: OpenStreetMap API fallback',
+    };
+  };
   let zoom = 14;
   let range = tileRange(plan.bounds, zoom);
   while (tileCount(range) > MAX_BUILDING_TILES && zoom > 13) range = tileRange(plan.bounds, --zoom);
@@ -305,7 +345,7 @@ async function fetchBuildings(plan, fetchImpl, progress, deps = null) {
     const modules = deps || await Promise.all([import(MVT_MODULE), import(PBF_MODULE)]);
     const VectorTile = modules[0].VectorTile;
     const Pbf = modules[1].default;
-    let features = 0;
+    let features = 0, heightedFeatures = 0;
     const jobs = [];
     for (let y = range.minY; y <= range.maxY; y++) for (let x = range.minX; x <= range.maxX; x++) {
       const wx = wrappedX(x, zoom);
@@ -326,17 +366,38 @@ async function fetchBuildings(plan, fetchImpl, progress, deps = null) {
         }
         return decoded;
       }).then(decoded => {
-        for (const feature of decoded || []) {
-          for (const polygon of feature.polygons) fillPolygon(plan, polygon, feature.height, plan.ground, buildings, uncertain);
-          features++;
-        }
+          for (const feature of decoded || []) {
+            for (const polygon of feature.polygons) fillPolygon(plan, polygon, feature.height, plan.ground, buildings, uncertain);
+            features++;
+            if (finite(feature.height)) heightedFeatures++;
+          }
       }));
     }
     await Promise.all(jobs);
-    return { buildings, uncertain, status: 'available', features };
+    return fallback({ buildings, uncertain, status: 'available', features, heightedFeatures });
   } catch (error) {
-    uncertain.fill(1);
-    return { buildings, uncertain, status: `unavailable: ${error.message}`, features: 0 };
+    return fallback({ buildings, uncertain, status: `unavailable: ${error.message}`, features: 0, heightedFeatures: 0 });
+  }
+}
+
+function osmMapUrl(bounds) {
+  const bbox = [bounds.west, bounds.south, bounds.east, bounds.north].map(value => Number(value).toFixed(6)).join(',');
+  return `${OSM_MAP_API}?bbox=${bbox}`;
+}
+
+async function fetchOsmMapBuildings(plan, fetchImpl, parser = null) {
+  const width = plan.bounds.east - plan.bounds.west;
+  const height = plan.bounds.north - plan.bounds.south;
+  if (plan.widthM * plan.heightM > MAX_OSM_MAP_FALLBACK_AREA_M2 || width > 0.25 || height > 0.25 || width * height > 0.01 || plan.bounds.west < -180 || plan.bounds.east > 180) {
+    return { status: 'skipped: requested area is too large for fallback footprints', features: [] };
+  }
+  try {
+    const xml = await (await cachedFetch(osmMapUrl(plan.bounds), {}, fetchImpl)).text();
+    const document = parser ? parser(xml) : new DOMParser().parseFromString(xml, 'application/xml');
+    if (document.querySelector?.('parsererror')) throw new Error('OpenStreetMap returned invalid XML.');
+    return { status: 'available', features: parseOsmMapBuildings(document) };
+  } catch (error) {
+    return { status: `unavailable: ${error.message}`, features: [] };
   }
 }
 
@@ -509,7 +570,7 @@ export async function acquireScene(request, options = {}) {
   const terrain = await fetchTerrain(plan, fetchImpl, progress);
   plan.ground = terrain.ground;
   const includeFoliage = options.includeFoliage !== false;
-  const buildingPromise = fetchBuildings(plan, fetchImpl, progress, options.vectorTileModules);
+  const buildingPromise = fetchBuildings(plan, fetchImpl, progress, options.vectorTileModules, options.osmMapParser);
   const canopyPromise = includeFoliage
     ? fetchCanopy(plan, fetchImpl, progress, options.geotiffModule)
     : Promise.resolve({
@@ -536,7 +597,7 @@ export async function acquireScene(request, options = {}) {
   ];
   const meta = {
     name: 'Browser-fetched global terrain, buildings & canopy',
-    source: 'AWS Terrain Tiles; OpenFreeMap/OpenMapTiles/OSM; Meta/WRI CHMv2 via Source Cooperative',
+    source: 'AWS Terrain Tiles; OpenFreeMap/OpenMapTiles/OSM with OSM API building-footprint fallback; Meta/WRI CHMv2 via Source Cooperative',
     resolution_m: plan.resolution,
     xmin: 0,
     ymax: plan.height * plan.resolution,

@@ -13,6 +13,7 @@ import {
   gridCellSpan,
   isRenderableBuilding,
   normalizeLon,
+  parseOsmMapBuildings,
   parseBuildingHeight,
   planRequest,
   tileRange,
@@ -99,6 +100,28 @@ function browserAcquisitionHarness() {
 
 const tinyAreaRequest = { center: [37, -122], radius_m: 30, resolution_m: 100 };
 
+function osmMapDocument(ways) {
+  const nodes = new Map([
+    ['1', [36.97385, -122.03115]], ['2', [36.97385, -122.03065]],
+    ['3', [36.97435, -122.03065]], ['4', [36.97435, -122.03115]],
+  ]);
+  const element = (attributes, children = []) => ({
+    getAttribute: name => attributes[name] ?? null,
+    getElementsByTagName: name => children.filter(child => child.name === name),
+  });
+  return {
+    documentElement: { nodeName: 'osm' },
+    getElementsByTagName: name => {
+      if (name === 'node') return [...nodes].map(([id, [lat, lon]]) => element({ id, lat, lon }));
+      if (name !== 'way') return [];
+      return ways.map(({ tags = {}, refs = ['1', '2', '3', '4', '1'] }) => element({}, [
+        ...refs.map(ref => ({ name: 'nd', ...element({ ref }) })),
+        ...Object.entries(tags).map(([k, v]) => ({ name: 'tag', ...element({ k, v }) })),
+      ]));
+    },
+  };
+}
+
 test('Terrarium RGB decoding preserves signed and fractional elevations', () => {
   assert.equal(decodeTerrariumPixel(128, 0, 0), 0);
   assert.equal(decodeTerrariumPixel(128, 1, 0), 1);
@@ -110,6 +133,17 @@ test('building heights use source render height and levels fallback', () => {
   assert.equal(parseBuildingHeight({ render_height: 24 }), 24);
   assert.equal(parseBuildingHeight({ 'building:levels': 4 }), 14);
   assert.equal(parseBuildingHeight({}), null);
+});
+
+test('OSM API fallback preserves metric building heights and unknown footprints', () => {
+  const buildings = parseOsmMapBuildings(osmMapDocument([
+    { tags: { building: 'yes', height: '12 m' } },
+    { tags: { building: 'yes' } },
+  ]));
+  assert.equal(buildings.length, 2);
+  assert.equal(buildings[0].height, 12);
+  assert.equal(buildings[1].height, null);
+  assert.equal(buildings[0].polygons[0][0].length, 5);
 });
 
 test('building import excludes vector features marked hidden from 3D', () => {
@@ -316,6 +350,34 @@ test('repeated acquisition reuses decoded building tiles', async () => {
     await acquireScene(tinyAreaRequest, options);
     assert.ok(firstPass > 0);
     assert.equal(decodedBuildings, firstPass);
+  } finally {
+    harness.restore();
+    clearResponseCache();
+  }
+});
+
+test('empty 3D building tiles fall back to tagged Santa Cruz OSM footprints', async () => {
+  clearResponseCache();
+  const harness = browserAcquisitionHarness();
+  let overpassRequests = 0;
+  try {
+    const acquired = await acquireScene({ center: [36.9741, -122.0309], radius_m: 30, resolution_m: 100 }, {
+      fetch: async url => {
+        if (String(url).startsWith('https://api.openstreetmap.org/api/0.6/map?bbox=')) {
+          overpassRequests++;
+          assert.match(String(url), /bbox=-122\.031/, 'OSM map requests use west,south,east,north bbox order');
+          return new Response('<osm version="0.6"/>', { headers: { 'content-type': 'application/xml' } });
+        }
+        return harness.fetchImpl(url);
+      },
+      vectorTileModules: harness.vectorTileModules,
+      osmMapParser: () => osmMapDocument([{ tags: { building: 'yes', height: '12 m' } }]),
+      includeFoliage: false,
+      renderOverlays: false,
+    });
+    assert.equal(overpassRequests, 1);
+    assert.match(acquired.meta.source_status.buildings, /OpenStreetMap API fallback/);
+    assert.ok(acquired.scene.buildings.some(row => [...row].some(Number.isFinite)));
   } finally {
     harness.restore();
     clearResponseCache();
