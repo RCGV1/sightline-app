@@ -2249,12 +2249,12 @@
       let open = false;
       for (let i = 0; i < profile.length; i++) {
         const g = profile[i].ground_m, b = profile[i].building_m;
-        if (!Number.isFinite(b) || !Number.isFinite(g) || b < g + 0.3 || profile[i].unknown) { open = false; continue; }
+        if (!Number.isFinite(b) || !Number.isFinite(g) || b < g + 0.3) { open = false; continue; }
         const xx = x(profile[i].distance_m).toFixed(1), yyB = y(b).toFixed(1), yyG = y(g).toFixed(1);
         if (!open) { d += `M${xx},${yyG} L${xx},${yyB}`; open = true; }
         else d += ` L${xx},${yyB}`;
         const nextB = profile[i+1]?.building_m;
-        if (i === profile.length-1 || !Number.isFinite(nextB) || profile[i+1].unknown) {
+        if (i === profile.length-1 || !Number.isFinite(nextB)) {
           d += ` L${xx},${yyG} Z `;
           open = false;
         }
@@ -2266,12 +2266,12 @@
       let open = false;
       for (let i = 0; i < profile.length; i++) {
         const g = profile[i].ground_m, t = profile[i].tree_m, b = profile[i].building_m;
-        if (!Number.isFinite(t) || !Number.isFinite(g) || t < g + 0.4 || (Number.isFinite(b) && b >= g + 0.3) || profile[i].unknown) { open = false; continue; }
+        if (!Number.isFinite(t) || !Number.isFinite(g) || t < g + 0.4 || (Number.isFinite(b) && b >= g + 0.3)) { open = false; continue; }
         const xx = x(profile[i].distance_m).toFixed(1), yyT = y(t).toFixed(1), yyG = y(g).toFixed(1);
         if (!open) { d += `M${xx},${yyG} L${xx},${yyT}`; open = true; }
         else d += ` L${xx},${yyT}`;
         const nextT = profile[i+1]?.tree_m;
-        if (i === profile.length-1 || !Number.isFinite(nextT) || profile[i+1].unknown) {
+        if (i === profile.length-1 || !Number.isFinite(nextT)) {
           d += ` L${xx},${yyG} Z `;
           open = false;
         }

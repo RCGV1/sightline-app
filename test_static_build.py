@@ -95,6 +95,15 @@ class StaticBuildTests(unittest.TestCase):
         self.assertIn('!Number.isFinite(d[key])', profile_line.group('body'))
         self.assertNotIn('d.unknown', profile_line.group('body'))
 
+    def test_measured_structures_and_canopy_stay_visible_on_unknown_paths(self):
+        app = (ROOT / 'static' / 'app.js').read_text()
+        fills = re.search(
+            r'const buildFill = \(\(\) => \{(?P<body>[\s\S]*?)\n    const ec = ',
+            app,
+        )
+        self.assertIsNotNone(fills)
+        self.assertNotIn('unknown', fills.group('body'))
+
     def test_deferred_overlays_share_work_and_reject_stale_results(self):
         app = (ROOT / 'static' / 'app.js').read_text()
         self.assertIn('overlayRenderPromise', app)
