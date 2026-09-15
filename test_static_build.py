@@ -85,6 +85,16 @@ class StaticBuildTests(unittest.TestCase):
         self.assertNotIn("$('runViewshed').click()", retry)
         self.assertNotRegex(retry, r'isRetryingViewshed\s*=\s*false;\s*continue;')
 
+    def test_known_terrain_stays_visible_on_unknown_paths(self):
+        app = (ROOT / 'static' / 'app.js').read_text()
+        profile_line = re.search(
+            r'const line = key => \{(?P<body>[\s\S]*?)\n    \};\n    const ticks',
+            app,
+        )
+        self.assertIsNotNone(profile_line)
+        self.assertIn('!Number.isFinite(d[key])', profile_line.group('body'))
+        self.assertNotIn('d.unknown', profile_line.group('body'))
+
     def test_deferred_overlays_share_work_and_reject_stale_results(self):
         app = (ROOT / 'static' / 'app.js').read_text()
         self.assertIn('overlayRenderPromise', app)

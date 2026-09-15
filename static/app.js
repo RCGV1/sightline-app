@@ -2200,7 +2200,7 @@
     const line = key => {
       let open = false;
       return profile.map(d => {
-        if (!Number.isFinite(d[key]) || (d.unknown && key !== 'ray_m')) {
+        if (!Number.isFinite(d[key])) {
           open = false;
           return '';
         }
